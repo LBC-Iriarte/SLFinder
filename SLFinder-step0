@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-
-# PATH directions (only for my testing)
-PATH=$PATH:/home/javier/programas/seq-kit
-
 usage() # Help message
 {
 	echo "This script takes Trinity assemblies and recovers the first and last pair bases of the longest issoform of each gene, according to Trinity name convention.
@@ -80,7 +76,7 @@ else
 			echo $assembly" is not a fasta file"
 			exit 1
 		else
-			not_zipped=$(ls $assembly$ASSEMBLIES | grep -c ".gz"$) # Esto se basa en la terminación del archivo, necesito un mejor método.
+			not_zipped=$(ls $assembly$ASSEMBLIES | grep -c ".gz"$)
 			if [ ! $not_zipped -eq 0 ]
 			then
 				echo "Please unzip all files"
