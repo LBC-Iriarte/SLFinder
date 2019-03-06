@@ -1,0 +1,661 @@
+#!/usr/bin/env bash
+
+date
+# PATH directions (only for my testing)
+PATH=$PATH:/home/javier/programas/ncbi-blast-2.7.1+/bin
+PATH=$PATH:/home/javier/programas/seq-kit
+PATH=$PATH:/home/javier/programas/cdhit
+
+##### Default Parameters
+
+OUT_DIR=SL-analysis
+GENOME_REF=FALSE
+SL_FILE=$OUT_DIR/Results/Hook_variants/Hook_all_variants.fa
+GENOME_REGION_RANGE=500
+GENOME_MATCH_COVERAGE=90
+THREADS=1
+ANNOTATION_BLAST_REF=FALSE
+ANNOTATION_BLAST_TYPE=prot
+BLAST_EVALUE=10
+
+##### Usage
+
+usage() # Help message
+{
+	echo "	Help message under construction!!!
+			usage: SL:detector-step-3.sh [OTHER PARAMETERS] [-a ASSEMBLIES] [-g GENOME] | [-h]]
+
+	This script takes the alignments generated in Step 2 and the user given trimming intervals to retrieve the pSLs
+	sequences. If a reference genome its provided it also conducts a BLAST seeking to localize its coding regions and
+	identify donor sites.
+
+	Packages required to have on the path:
+		1) BLAST
+		2) Seqkit
+		3) MAFFT
+
+	Input options:
+		-g, --genomeblast	Reference genome in fasta format (unzipped)
+		-s, --pslfile	File name with trimming information needed to retrieve the pSL sequences (Default: Hook_all_variants.fa)
+		-br, --blast_ref Reference database in fasta format, to be used to annotate the regions if provided
+
+	pSL against Genome BLAST options
+		-gc, --gen_cov	Coverage threshold of the pSL matches on the genome (Default: 90)
+
+	pSL genomic loci against Annotation ref. options:
+		-bt, --blast_ty	Reference database type: nucl or prot (Default: prot)
+		-be, --blast_ev	Order of magnitude for the evalue cutoff used in the BLAST annotation, the program reads it as '1e-'[YOUR VALUE] (Default: 10. For a 1e-10 cutoff)
+		-gr, --rangeG	Genome region to annotate (Default: 500pb)
+
+	Other options:
+		-o, --outdir	Directory where to store the output and temporary files (Default: SL-analysis)
+		-t, --threads	Number of processors to use when possible (cd-hit-est, MAFFT) (Default=1)
+		-h, --help	This help message.
+	"
+		 exit
+}
+
+##### Parameter reading
+while [ "$1" != "" ]; do
+	case $1 in
+		-br | --blast_ref )		shift
+								ANNOTATION_BLAST_REF=$1
+								;;
+		-bt | --blast_ty )		shift
+								ANNOTATION_BLAST_TYPE=$1
+								;;
+		-be | --blast_ev )		shift
+								BLAST_EVALUE=$1
+								;;
+		-gc | --gen_cov )		shift
+								GENOME_MATCH_COVERAGE=$1
+								;;
+		-g | --genomeblast )	shift
+								GENOME_REF=$1
+								;;
+		-o | --outdir )			shift
+								OUT_DIR=$1
+								;;
+		-s | --pslfile )		shift
+								SL_FILE=$1
+								;;
+		-gr | --rangeG )		shift
+								GENOME_REGION_RANGE=$1
+								;;
+		-t | --threads )		shift
+								THREADS=$1
+								;;
+		-h | --help )			usage
+								exit
+								;;
+		* )						usage
+								exit 1
+	esac
+	shift
+done
+
+##### Checking if all programs are installed
+hash blastn 2>/dev/null || { echo >&2 "Blast seems to not been installed or added to the Path. Aborting."; exit 1; }
+hash seqkit 2>/dev/null || { echo >&2 "Seqkit seems to not been installed or added to the Path. Aborting."; exit 1; }
+hash mafft 2>/dev/null || { echo >&2 "Mafft seems to not been installed or added to the Path. Aborting."; exit 1; }
+
+##### Validación de parámetros
+
+# OUT_DIR exists and there is no other
+if [ -z $OUT_DIR ]
+then
+	echo "No OUT_DIR detected. Something must be wrong with the given command (eg. whitespaces)"
+	exit 1
+else
+	if [ ! -d $OUT_DIR ]
+	then
+		echo "There is no directory named: "$OUT_DIR
+		exit 1
+	fi
+fi
+
+# Reference genome fasta file exists, is a fasta and its not ziped
+reference_genome=$(seqkit stats $GENOME_REF) # seqkit error message already clarifies if its a format or a file existing issue
+if [ -z "$reference_genome" ]
+then
+	echo "Invalid reference genome file: "$GENOME_REF
+	exit 1
+else
+	not_zipped=$(ls $GENOME_REF | grep -c ".gz"$) # Esto se basa en la terminación del archivo, necesito un mejor método.
+	if [ ! $not_zipped -eq 0 ]
+	then
+		echo "Please unzip "$GENOME_REF
+		exit 1
+	fi
+fi
+
+# SL_FILE exists and is a fasta file
+sl_secuences=$(ls $SL_FILE)
+if [ -z "$sl_secuences" ]
+then
+	echo "No SL file detected in: "$OUT_DIR"/Results/Hook_variants/"$SL_FILE
+	exit 1
+else
+	is_fasta=$(seqkit stats $SL_FILE)
+	if [ -z "$sl_secuences" ]
+	then
+		echo $SL_FILE" isn't a fasta file or its damaged"
+		exit 1
+	fi
+fi
+
+# THREADS is a valid number
+if [[ ! "$THREADS" =~ ^[0-9]+$ ]]
+then
+	echo "-t value must be an integir: " $THREADS
+	exit 1
+else
+	if [ $THREADS -eq 0 ]
+	then
+		echo "Invalid -t value: "$THREADS
+		exit 1
+	fi
+fi
+
+# $GENOME_MATCH_COVERAGE is a valid number
+if [[ ! "$GENOME_MATCH_COVERAGE" =~ ^[0-9]+$ ]]
+then
+	echo "-t value must be an integir: " $GENOME_MATCH_COVERAGE
+	exit 1
+else
+	if [ $GENOME_MATCH_COVERAGE -eq 0 ] && [ $GENOME_MATCH_COVERAGE -le 100 ]
+	then
+		echo "Invalid -t value: "$GENOME_MATCH_COVERAGE
+		exit 1
+	fi
+fi
+
+#### Validating Annotation parameters
+# $ANNOTATION_BLAST_REF exists
+if [ "$ANNOTATION_BLAST_REF" == "FALSE" ]
+then
+	echo "No external reference provided"
+	exit 1
+else
+	blast_reference=$(seqkit stats $ANNOTATION_BLAST_REF) # seqkit error message already clarifies if its a format or a file existing issue
+	if [ -z "$blast_reference" ]
+	then
+		echo "Invalid blast reference file: "$blast_reference
+		exit 1
+	else
+		not_zipped=$(ls $ANNOTATION_BLAST_REF | grep -c ".gz"$) # Esto se basa en la terminación del archivo, necesito un mejor método.
+		if [ ! $not_zipped -eq 0 ]
+		then
+			echo "Please unzip "$ANNOTATION_BLAST_REF
+			exit 1
+		fi
+	fi
+fi
+
+# $ANNOTATION_BLAST_TYPE is a valid string
+if [ ! "$ANNOTATION_BLAST_TYPE" == "prot" ]
+then
+	if [ ! "$ANNOTATION_BLAST_TYPE" == "nucl" ]
+	then
+		echo "Invalid -bt: "$ANNOTATION_BLAST_TYPE
+		echo "Must be 'nucl' or 'prot'"
+		exit 1
+	fi
+fi
+
+# $BLAST_EVALUE is a valid number
+if [[ ! "$BLAST_EVALUE" =~ ^[0-9]+$ ]]
+then
+	echo "-be value must be an integir: " $BLAST_EVALUE
+	exit 1
+else
+	if [ $BLAST_EVALUE -eq 0 ]
+	then
+		echo "Invalid -be value: "$BLAST_EVALUE
+		exit 1
+	fi
+fi
+
+# $GENOME_REGION_RANGE is a valid number
+if [[ ! "$GENOME_REGION_RANGE" =~ ^[0-9]+$ ]]
+then
+	echo "-r value must be an integir: " $GENOME_REGION_RANGE
+	exit 1
+else
+	if [ $GENOME_REGION_RANGE -le 0 ]
+	then
+		echo "Invalid -r value: "$GENOME_REGION_RANGE
+		exit 1
+	fi
+fi
+
+##### Program execution
+
+### Removing previous run
+rm -r $OUT_DIR/temp_files/Reference
+rm -r $OUT_DIR/temp_files/Genome_locis
+rm -r $OUT_DIR/temp_files/Spliced_leader_transcripts
+rm -r $OUT_DIR/Results/SL_BLAST
+rm -r $OUT_DIR/Results/Genome_locis
+rm -r $OUT_DIR/Results/Spliced_leader_transcripts
+rm $OUT_DIR/Results/Step3_Loci.tab
+rm $OUT_DIR/Warnings/Step3_Problematic-Loci
+rm $OUT_DIR/Warnings/Step3_Sequence-retrieval-warnings
+rm $OUT_DIR/Results/Unclear_SL.fa
+rm $OUT_DIR/Results/SL.fa
+rm $OUT_DIR/Results/Step3_Spliced_transcripts
+
+###Creation of necesary directories
+
+# Temporal files
+mkdir $OUT_DIR/temp_files/Reference
+mkdir $OUT_DIR/temp_files/Genome_locis
+mkdir $OUT_DIR/temp_files/Spliced_leader_transcripts
+
+#Results
+mkdir $OUT_DIR/Results/SL_BLAST
+mkdir $OUT_DIR/Results/Genome_locis
+mkdir $OUT_DIR/Results/Spliced_leader_transcripts
+
+
+### Creating Blast Database
+echo "Constructing genome blast reference"
+makeblastdb -in $GENOME_REF -dbtype nucl -parse_seqids -input_type fasta -out $OUT_DIR/temp_files/Reference/Reference_genome-ref
+seqkit fx2tab -n -l $GENOME_REF >> $OUT_DIR/temp_files/Reference/Genome_size
+
+### Blasting pSLs to the Reference Genome (100% de identidad obligatorio)
+echo "
+Conducting BLAST search"
+blastn -task blastn-short -query $SL_FILE -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -outfmt "6 std" -out $OUT_DIR/Results/SL_BLAST/"SL-BLAST" -num_threads $THREADS -perc_identity 100 -ungapped -qcov_hsp_perc $GENOME_MATCH_COVERAGE
+
+### Checking if there are Blast Results
+check_blast=$(find $OUT_DIR/Results/SL_BLAST/ -type f -empty | grep "SL-BLAST") # Just to be sure
+if [ ! -z "$check_blast" ]
+then
+	echo "No BLAST results to analyze"
+	exit
+fi
+
+loci_number=1
+### Recovering loci coordinates -> Calquier programa que cuente matcheos por coordenadas (como lo que se hace para expresión diferencial) funcionaria mejor
+# To reduce running time, the blast results are divided by chromosome
+echo "Procesing BLAST results."
+echo -e "Loci Nº\tStar\tEnd\tLoci length\tLongest Hit\tAlert type" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+
+chromosome_id=$(cut -f 2 $OUT_DIR/Results/SL_BLAST/"SL-BLAST" | sort -u)
+for chr in $chromosome_id
+do
+	grep -w $chr $OUT_DIR/Results/SL_BLAST/"SL-BLAST" | awk '{if ($9 < $10) print $1"\t"$4"\t"$9"\t"$10"\tplus"; else print $1"\t"$4"\t"$10"\t"$9"\tminus"}' | sort -n -k 3 >> $OUT_DIR/temp_files/Genome_locis/$chr"-Loci"
+	loci_start=$(head -n 1 $OUT_DIR/temp_files/Genome_locis/$chr"-Loci" | cut -f 3)
+	loci_end=$(head -n 1 $OUT_DIR/temp_files/Genome_locis/$chr"-Loci" | cut -f 4)
+	blast_line=1
+	blast_result_number=$(wc -l $OUT_DIR/temp_files/Genome_locis/$chr"-Loci" | cut -f 1 -d " ")
+	while [ $blast_line -le $blast_result_number ]
+	do
+		echo $chr" Blast result Nº"$blast_line" of "$blast_result_number
+		sl_start=$(sed -n "$blast_line"p $OUT_DIR/temp_files/Genome_locis/$chr"-Loci" | cut -f 3)
+		sl_end=$(sed -n "$blast_line"p $OUT_DIR/temp_files/Genome_locis/$chr"-Loci" | cut -f 4)
+		if [ $sl_start -le $loci_end -a $loci_start -le $sl_end ]
+		then
+			# Agregar el archivo a la lista
+			sed -n "$blast_line"p $OUT_DIR/temp_files/Genome_locis/$chr"-Loci" >> $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches"
+			# Actualizar $loci end
+			if [ $sl_end -gt $loci_end ]
+			then
+				loci_end=$sl_end
+			fi
+		else
+			# Verificar que no sea un sitio problemático todo: Hacer este control en una función
+			loci_len=$(( $loci_end - $loci_start ))
+			longest_match_control=$(sort -n -k 2 -r $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches" | tail -n 1 | cut -f 2 )
+			longest_match_control_1=$(sort -n -k 2 -r $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches" | tail -n 1 | awk '{print $2 + 2}')
+			longest_match_control_2=$(sort -n -k 2 -r $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches" | tail -n 1 | awk '{print $2 + 5}')
+			longest_match_control_3=$(sort -n -k 2 -r $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches"| tail -n 1 | awk '{print $2 + 10}')
+			if [ $loci_len -ge $longest_match_control_3 ]
+			then
+				echo -e "Loci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len"\t"$longest_match_control"\t3" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+			elif [ $loci_len -ge $longest_match_control_2 ]
+			then
+				echo -e "Loci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len"\t"$longest_match_control"\t2" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+			elif [ $loci_len -ge $longest_match_control_1 ]
+			then
+				echo -e "Loci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len"\t"$longest_match_control"\t1" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+			else
+				echo -e "Loci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len"\t"$longest_match_control"\t0" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+			fi
+
+			# Registrar datos
+			# Loci number - Star - End - Matching Variants
+			variant_hits=$(wc -l $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches" | cut -f 1 -d " " )
+			echo -e  $chr"\tLoci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len >> $OUT_DIR/temp_files/Genome_locis/Loci_location_temp
+
+			# Actualizando loci info
+			loci_number=$(( $loci_number + 1 ))
+			loci_start=$sl_start
+			loci_end=$sl_end
+			sed -n "$blast_line"p $OUT_DIR/temp_files/Genome_locis/$chr"-Loci" >> $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches"
+		fi
+		blast_line=$(( $blast_line + 1 ))
+	done
+	loci_len=$(( $loci_end - $loci_start + 1 ))
+	# Verificar que no sea un sitio problemático X2 todo: Hacer este control en una función
+	longest_match_control=$(sort -n -k 2 -r $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches" | tail -n 1 | cut -f 2 )
+	longest_match_control_1=$(sort -n -k 2 -r $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches" | tail -n 1 | awk '{print $2 + 2}')
+	longest_match_control_2=$(sort -n -k 2 -r $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches" | tail -n 1 | awk '{print $2 + 5}')
+	longest_match_control_3=$(sort -n -k 2 -r $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches"| tail -n 1 | awk '{print $2 + 10}')
+	if [ $loci_len -ge $longest_match_control_3 ]
+	then
+		echo -e "Loci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len"\t"$longest_match_control"\t3" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+		elif [ $loci_len -ge $longest_match_control_2 ]
+		then
+			echo -e "Loci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len"\t"$longest_match_control"\t2" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+		elif [ $loci_len -ge $longest_match_control_1 ]
+		then
+			echo -e "Loci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len"\t"$longest_match_control"\t1" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+		else
+			echo -e "Loci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len"\t"$longest_match_control"\t0" >> $OUT_DIR/Warnings/Step3_Problematic-Loci
+	fi
+	variant_hits=$(wc -l $OUT_DIR/temp_files/Genome_locis/$chr"_Loci-"$loci_number"_pSL-matches" | cut -f 1 -d " " )
+	echo -e  $chr"\tLoci-"$loci_number"\t"$loci_start"\t"$loci_end"\t"$loci_len >> $OUT_DIR/temp_files/Genome_locis/Loci_location_temp
+	loci_number=$(( $loci_number + 1 ))
+done
+
+## Retrieving sequence data and aligment
+# Esta parte puede ser facilmente integrada en el for de arriba pero creo que simplifica mucho la lectura del codigo
+echo "
+
+Extracting Loci's sequence and checking donor site"
+for chr in $chromosome_id
+do
+	mkdir $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"
+	all_locis=$(grep ^$chr$'\t' $OUT_DIR/temp_files/Genome_locis/Loci_location_temp | cut -f 2 )
+
+	for loci in $all_locis
+	do
+		echo $chr" - "$loci
+		donor_site_alert=False
+		loci_start=$(grep -w $loci $OUT_DIR/temp_files/Genome_locis/Loci_location_temp | cut -f 3)
+		loci_end=$(grep -w $loci $OUT_DIR/temp_files/Genome_locis/Loci_location_temp | cut -f 4)
+		chr_end=$(grep ^$chr$'\t' $OUT_DIR/temp_files/Reference/Genome_size | cut -f 4)
+		# checking alignment start
+		if [ $loci_start -lt 2 ]
+		then
+			echo "WARNING: "$loci" start is too close to the beginning of the sequence chromosome sequence for proper alignment." >> $OUT_DIR/Warnings/Step3_Sequence-retrieval-warnings
+			donor_site_alert=TRUE
+		else
+			aln_start=$(($loci_start - 2 ))
+		fi
+		# checking alignment end
+		aln_end=$(($loci_end + 2))
+		if [ $aln_end -gt $chr_end ]
+		then
+			echo "WARNING: "$loci" end is too close to the end of the sequence chromosome sequence for proper alignment." >> $OUT_DIR/Warnings/Step3_Sequence-retrieval-warnings
+			donor_site_alert=TRUE
+			aln_end=$loci_end
+		fi
+		printf "%s %s %s %s\n%s %s %s\n" $chr" "$aln_start"-"$aln_end" plus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed "/^>/ s/$/_$loci/" | tr -d " " >> $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa"
+		hook_variants=$(cut -f 1 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches")
+		for hook in $hook_variants
+		do
+			strand=$(grep -w $hook $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | cut -f 5)
+			if [ "$strand" == "plus" ]
+			then
+				seqkit grep -p $hook $SL_FILE >> $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa"
+			else
+				seqkit grep -p $hook $SL_FILE | seqkit seq -p -r -w 0 >> $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa"
+			fi
+		done
+		mafft --quiet --globalpair --thread $THREADS --maxiterate 1000 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa" > $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci"-matches.al"
+		# Checking Donor site
+		loci_alert=$(grep -w $loci $OUT_DIR/Warnings/Step3_Problematic-Loci | cut -f 6)
+		loci_sequence_F=$(seqkit head -n 1 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa" | seqkit subseq -r "5:-5" | seqkit seq -s )
+		loci_sequence_R=$(seqkit head -n 1 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa" | seqkit subseq -r "5:-5" | seqkit seq -p -s )
+		largest_hook=$(sort -k 2 -n -r $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | head -n 1 | cut -f 1 | sed 's/-3prima-.*//' | sed 's/-5prima-.*//')
+		Count_seq_Forward=$(grep -c $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$largest_hook"-"* | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 2)
+		Count_seq_Reverse=$(grep -c $loci_sequence_R $OUT_DIR/Results/Raw_Matches/$largest_hook"-"* | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 2)
+
+		if [ $Count_seq_Forward -gt $Count_seq_Reverse ]
+		then
+			Orient_seq_Forward=$(grep -c $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$largest_hook"-"* | sed "s/$largest_hook//" | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 1)
+			if [ "$Orient_seq_Forward" == "-5prima" ]
+			then
+				seq_orient=Forward
+			elif [ "$Orient_seq_Forward" == "-3prima" ]
+			then
+				seq_orient=Reverse
+			fi
+		else
+			Orient_seq_Reverse=$(grep -c $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$largest_hook"-"* | sed "s/$largest_hook//" | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 1)
+			if [ "$Orient_seq_Reverse" == "-5prima" ]
+			then
+				seq_orient=Reverse
+			elif [ "$Orient_seq_Reverse" == "-3prima" ]
+			then
+				seq_orient=Forward
+			fi
+		fi
+		echo -e "Hook Variant\tLength\tStart\tEnd\tHook Orientation\tPotential Donor site\tLoci Orientation: "$seq_orient >> $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab"
+		if [ $loci_alert -eq 3 ] || [ ! "$donor_site_alert" == "False" ]
+		then
+			grep -w $hook $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\tNot Analyzed\tNot Analyzed"}' >> $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab"
+		else
+			for hook in $hook_variants
+			do
+				if [ "$seq_orient" == "Forward" ]
+				then
+					extract_sl3=$(grep -w $hook $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | awk '{print $4-1"-"$4+2}')
+					donor_site=$(printf "%s %s %s %s\n%s %s %s\n" $chr" "$extract_sl3" plus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed '/>/d' | grep -c "GT")
+					grep -w $hook $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | awk -v donor=$donor_site '{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"donor}' >> $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab"
+				else
+					extract_sl5=$(grep -w $hook $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | awk '{print $3-2"-"$3+1}')
+					donor_site=$(printf "%s %s %s %s\n%s %s %s\n" $chr" "$extract_sl5" plus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed '/>/d' | grep -c "AC")
+					grep -w $hook $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | awk -v donor=$donor_site '{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"donor}' >> $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab"
+				fi
+			done
+		fi
+
+		# Extracting sequence for Annotation
+		if [ $loci_start -lt $GENOME_REGION_RANGE ]
+		then
+			echo "WARNING: "$loci" start is too close to the beginning of the sequence chromosome sequence for proper alignment." >> $OUT_DIR/Warnings/Step3_Sequence-retrieval-warnings
+		else
+			blastn_start=$(($loci_start - $GENOME_REGION_RANGE ))
+		fi
+
+		# checking alignment end
+		blastn_end=$(($loci_end + $GENOME_REGION_RANGE))
+		if [ $aln_end -gt $chr_end ]
+		then
+			echo "WARNING: "$loci" end is too close to the end of the sequence chromosome sequence for proper alignment." >> $OUT_DIR/Warnings/Step3_Sequence-retrieval-warnings
+			blastn_end=$loci_end
+		fi
+		printf "%s %s %s %s\n%s %s %s\n" $chr" "$blastn_start"-"$blastn_end" plus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed "/^>/ s/$/_$loci/" | tr -d " " >> $OUT_DIR/temp_files/Genome_locis/All_potential_matches.fa
+	done
+done
+
+### Annotation - BLAST
+echo "Annotating Locis
+Constructing reference"
+# Making BLAST Reference
+makeblastdb -in $ANNOTATION_BLAST_REF -dbtype $ANNOTATION_BLAST_TYPE -parse_seqids -input_type fasta -out $OUT_DIR/temp_files/Reference/Blast_annotation-ref
+# Doing the BLAST
+mkdir $OUT_DIR/Results/Genome_locis/Blast_annotation
+if [ "$ANNOTATION_BLAST_TYPE" == "prot" ]
+then
+	echo "Doing BLASTX Search"
+	blastx -query $OUT_DIR/temp_files/Genome_locis/All_potential_matches.fa -db $OUT_DIR/temp_files/Reference/Blast_annotation-ref -outfmt "7 std" -out $OUT_DIR/Results/Genome_locis/Blast_annotation/"Loci-BLAST" -num_threads $THREADS -evalue "1e-"$BLAST_EVALUE
+else
+	echo "Doing BLASTN Search"
+	blastn -query $OUT_DIR/temp_files/Genome_locis/All_potential_matches.fa -db $OUT_DIR/temp_files/Reference/Blast_annotation-ref -outfmt "7 std" -out $OUT_DIR/Results/Genome_locis/Blast_annotation/"Loci-BLAST" -num_threads $THREADS -evalue "1e-"$BLAST_EVALUE
+fi
+
+# Constructing Loci Result Table
+echo "Summarizing results"
+echo -e "Nº Loci\tChromosome\tLoci extended length\tLoci Orientation\tTotal SL\tSL with donor sites\tDonor Site\tBest pSL ID\tStart-Best\tEnd-Best\tAnnotation Hits\tBest Hit ID\tIdentity\tEvalue" >> $OUT_DIR/Results/Step3_Loci.tab
+#			1			2			3					4				5					6				7			8			9			10			11				12			13		14
+for chr in $chromosome_id
+do
+	all_locis=$(grep -w $chr $OUT_DIR/temp_files/Genome_locis/Loci_location_temp | cut -f 2 )
+	for loci in $all_locis
+	do
+		variable3=$(grep -w ^$loci $OUT_DIR/Warnings/Step3_Problematic-Loci | cut -f 4)
+		variable4=$(head -n 1 $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab" | sed 's/.*Loci Orientation: //')
+		variable5=$(wc -l $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | cut -f 1 -d " ")
+		check_donor_site=$(grep -c "Not Analyzed" $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab")
+		if [ $check_donor_site -gt 0 ]
+		then
+			variable6="Not Analyzed"
+			variable7="Not Analyzed"
+			# Si no hay sitio donador, el mejor hook es el que alinea con mas pb
+			variable8=$(grep -v ^"Hook Variant" $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab" | sort -n -k 2 | tail -n 1 | cut -f 1 )
+		else
+			variable6=$(grep -v ^"Hook Variant" $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab" | cut -f 6 | grep -c "1")
+			threshold_var7=$(grep -v -c ^"Hook Variant" $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab"  | awk '{ print int($1*0.8) }' )
+			if [ $variable6 -eq 0 ]
+			then
+				variable7="Not detected"
+				# Si no hay sitio donador, el mejor hook es el que alinea con mas pb
+				variable8=$(grep -v ^"Hook Variant" $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab" | sort -n -k 2 | tail -n 1 | cut -f 1 )
+			else
+				if [ $variable6 -ge $threshold_var7 ]
+				then
+					if [ "$variable4" == "Forward" ]
+					then
+						variable7="3prima"
+					else
+						variable7="5prima"
+					fi
+				else
+					variable7="Unclear"
+				fi
+			# Si hay sitio donador, el mejor hook es el que alinea con mas pb y tiene un sitio donador
+			variable8=$(grep -v ^"Hook Variant" $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab" | awk '{if ($6 > 0) print }' | sort -n -k 2 | tail -n 1 | cut -f 1 )
+			fi
+		fi
+
+		variable9=$(grep -w ^$variable8 $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab" | cut -f 3 )
+		variable10=$(grep -w ^$variable8 $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab" | cut -f 4 )
+		variable11=$(grep -P "_"$loci"\t" $OUT_DIR/Results/Genome_locis/Blast_annotation/"Loci-BLAST" | wc -l | cut -f 1 -d " ")
+		if [ $variable11 -eq 0 ]
+		then
+			variable12="-"
+			variable13="-"
+			variable14="-"
+		else
+			variable12=$(grep -P "_"$loci"\t" $OUT_DIR/Results/Genome_locis/Blast_annotation/"Loci-BLAST" | head -n 1 | cut -f 2)
+			variable13=$(grep -P "_"$loci"\t" $OUT_DIR/Results/Genome_locis/Blast_annotation/"Loci-BLAST" | head -n 1 | cut -f 3)
+			variable14=$(grep -P "_"$loci"\t" $OUT_DIR/Results/Genome_locis/Blast_annotation/"Loci-BLAST" | head -n 1 | cut -f 11)
+		fi
+		echo -e $loci"\t"$chr"\t"$variable3"\t"$variable4"\t"$variable5"\t"$variable6"\t"$variable7"\t"$variable8"\t"$variable9"\t"$variable10"\t"$variable11"\t"$variable12"\t"$variable13"\t"$variable14 >> $OUT_DIR/Results/Step3_Loci.tab
+	done
+done
+
+# Retrieving Best SL sequence
+echo "Retrieving the sequence of the best pSL"
+check_best=FALSE
+check_unclear=FALSE
+
+
+matches=$(grep -v "Nº Loci" $OUT_DIR/Results/Step3_Loci.tab | cut -f 1)
+for mat in $matches
+do
+	annotation=$(grep -w $mat $OUT_DIR/Results/Step3_Loci.tab | cut -f 11)
+	if [ $annotation -eq 0 ]
+	then
+		chromo=$(grep -w $mat $OUT_DIR/Results/Step3_Loci.tab | cut -f 2)
+		donor_site=$(grep -w $mat $OUT_DIR/Results/Step3_Loci.tab | cut -f 7)
+		coordinates=$(grep -w $mat $OUT_DIR/Results/Step3_Loci.tab | cut -f 9,10 | awk '{print $1"-"$2}')
+		if [ "$donor_site" == "3prima" ]
+		then
+			printf "%s %s %s %s\n%s %s %s\n" $chromo" "$coordinates" plus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed "/^>/ s/$/-pSL_/" | sed "/^>/ s/$/$mat/" | tr -d " " >> $OUT_DIR/Results/Genome_locis/Best_SL_Loci.fa
+			check_best=TRUE
+		elif [ "$donor_site" == "5prima" ]
+		then
+			printf "%s %s %s %s\n%s %s %s\n" $chromo" "$coordinates" minus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed "/^>/ s/$/-pSL_/" | sed "/^>/ s/$/$mat/" | tr -d " " >> $OUT_DIR/Results/Genome_locis/Best_SL_Loci.fa
+			check_best=TRUE
+		elif [ "$donor_site" == "Unclear" ]
+		then
+			orient=$(grep -w $mat $OUT_DIR/Results/Step3_Loci.tab | cut -f 4)
+			if [ "$orient" == "Forward" ]
+			then
+				printf "%s %s %s %s\n%s %s %s\n" $chromo" "$coordinates" plus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed "/^>/ s/$/-pSL_/" | sed "/^>/ s/$/$mat/" | tr -d " " >> $OUT_DIR/Results/Genome_locis/Unclear_SL_Loci.fa
+				check_unclear=TRUE
+			else
+				printf "%s %s %s %s\n%s %s %s\n" $chromo" "$coordinates" minus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed "/^>/ s/$/-pSL_/" | sed "/^>/ s/$/$mat/" | tr -d " " >> $OUT_DIR/Results/Genome_locis/Unclear_SL_Loci.fa
+				check_unclear=TRUE
+			fi
+		fi
+	fi
+done
+
+echo "
+Clustering pSLs by sequence.
+"
+
+#todo: Hacer una función con esto
+
+if [ "$check_best" == "TRUE" ]
+then
+	cd-hit-est -d 0 -c 1 -T $THREADS -i $OUT_DIR/Results/Genome_locis/Best_SL_Loci.fa -o $OUT_DIR/temp_files/Genome_locis/SL.temp
+	sl_loci=$(grep ">" $OUT_DIR/temp_files/Genome_locis/SL.temp | sed "s/-pSL_/\\t/" | sed "s/>//" | cut -f 2)
+	for psl in $sl_loci
+	do
+		hook_variant=$(grep -w $psl $OUT_DIR/Results/Step3_Loci.tab | cut -f 8 | sed 's/-3prima-.*//' | sed 's/-5prima-.*//')
+		seqkit grep -r -p "-pSL_"$psl $OUT_DIR/temp_files/Genome_locis/SL.temp | sed "/>/ s/$/_$hook_variant/" >> $OUT_DIR/Results/SL.fa
+
+		echo -e $psl"\t"$hook_variant >> $OUT_DIR/temp_files/Genome_locis/SL_hooks.temp
+	done
+else
+	echo "No pSL have a clear Donor site"
+fi
+
+#todo: Hacer una función con esto
+if [ "$check_unclear" == "TRUE" ]
+then
+	cd-hit-est -d 0 -c 1 -T $THREADS -i $OUT_DIR/Results/Genome_locis/Unclear_SL_Loci.fa -o $OUT_DIR/temp_files/Genome_locis/Unclear_SL.fa
+	psl_loci=$(grep ">" $OUT_DIR/temp_files/Genome_locis/Unclear_SL.fa | sed "s/-Unclear_SL_/\\t/" | sed "s/>//" | cut -f 2)
+	for psl in $psl_loci
+	do
+		hook_variant=$(grep -w $psl $OUT_DIR/Results/Step3_Loci.tab | cut -f 8 | sed 's/-3prima-.*//' | sed 's/-5prima-.*//')
+		seqkit grep -r -p "-pSL_"$psl $OUT_DIR/temp_files/Genome_locis/Unclear_SL.fa | sed "/>/ s/$/_$hook_variant/" >> $OUT_DIR/Results/Unclear_SL.fa
+		echo -e $psl"\t"$hook_variant >> $OUT_DIR/temp_files/Genome_locis/SL_hooks.temp
+	done
+fi
+
+echo "
+Checking spliced leader transcripts.
+"
+
+if [ "$check_best" == "TRUE" ] || [ "$check_unclear" == "TRUE" ]
+then
+	sl_hooks=$(cut -f 2 $OUT_DIR/temp_files/Genome_locis/SL_hooks.temp | sort -u )
+	for pslh in $sl_hooks
+	do
+		mkdir $OUT_DIR/Results/Spliced_leader_transcripts/$pslh"_Transcripts_ID"
+		cp $OUT_DIR/temp_files/Blast_search/*"-"$pslh"-ID" $OUT_DIR/Results/Spliced_leader_transcripts/$pslh"_Transcripts_ID"/
+		ls $OUT_DIR/Results/Spliced_leader_transcripts/$pslh"_Transcripts_ID"/*"-"$pslh"-ID" | sed 's/.*_Transcripts_ID\///' | sed "s/-$pslh.*//" >> $OUT_DIR/temp_files/Spliced_leader_transcripts/assemblies.temp
+	done
+	assemblies=$(cat $OUT_DIR/temp_files/Spliced_leader_transcripts/assemblies.temp | sort -u)
+	echo "Hooks "$assemblies | tr " " "\t" >> $OUT_DIR/Results/Step3_Spliced_transcripts
+	for pslh in $sl_hooks
+	do
+		table_line=$(echo $pslh)
+		for assembly in $assemblies
+		do
+			if [ -f $OUT_DIR/Results/Spliced_leader_transcripts/$pslh"_Transcripts_ID"/$assembly"-"$pslh"-ID" ]
+			then
+				count=$(wc -l $OUT_DIR/Results/Spliced_leader_transcripts/$pslh"_Transcripts_ID"/$assembly"-"$pslh"-ID" | cut -f 1 -d " ")
+				table_line=$table_line" "$count
+			else
+				count=0
+				table_line=$table_line" "$count
+			fi
+		done
+		echo $table_line | tr " " "\t" >> $OUT_DIR/Results/Step3_Spliced_transcripts
+	done
+fi
+
+echo "
+Step 3 is done!!! Thanks for using this pipeline"
+
+date
