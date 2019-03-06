@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
 
-date
-# PATH directions (only for my testing)
-PATH=$PATH:/home/javier/programas/ncbi-blast-2.7.1+/bin
-PATH=$PATH:/home/javier/programas/salmon-0.11.3-linux_x86_64/bin
-PATH=$PATH:/home/javier/programas/trinityrnaseq-Trinity-v2.8.3
-PATH=$PATH:/home/javier/programas/seq-kit
-PATH=$PATH:/home/javier/programas/cdhit
-
 # Default values
 ASSEMBLIES=_Trinity.fasta
 BLAST_I=90
@@ -25,7 +17,6 @@ THREADS=1
 SEQTRIMM=50
 
 ##### Usage
-
 usage() # Help message
 {
 	echo "This script takes filtered transcriptomes to generate potential Spliced Leaders sequences (or hooks) using assembled common kmers and then retrieves similar sequences present on the original assemblies.
@@ -60,7 +51,7 @@ usage() # Help message
 		-i, --iorent	Percentage of cut off of for the Orientation Index (Default: 0.95)
 
 	Other options:
-		-s, --seqtrimm	Trimm Raw matches larger than X, counting from the match (Default: 50) ### Necesito una mejor forma de describirlo
+		-s, --seqtrimm	Trimm Raw matches larger than X, counting from the match more central coordinate. Must be at least 20pb long (Default: 50) ### Necesito una mejor forma de describirlo
 		-M, --Tmaxmemory	Suggested max memory for trinity in Gigabytes (Default: 1)
 		-t, --threads	Number of processors to use when possible (Blast, cd-hit-est and Trinity)
 		-h, --help	This help message.
@@ -68,7 +59,7 @@ usage() # Help message
 		 exit
 }
 
-##### Lectura de parámetros
+##### Parameter reading
 while [ "$1" != "" ]; do
 	case $1 in
 		-a | --assembly )		shift
@@ -148,7 +139,7 @@ else
 			echo $assembly" is not a fasta file"
 			exit 1
 		else
-			not_zipped=$(ls $assembly$ASSEMBLIES | grep -c ".gz"$) # Esto se basa en la terminación del archivo, necesito un mejor método.
+			not_zipped=$(ls $assembly$ASSEMBLIES | grep -c ".gz"$)
 			if [ ! $not_zipped -eq 0 ]
 			then
 				echo "Please unzip all files"
@@ -197,13 +188,12 @@ if [ ! "$filtered_list" == "$assembly_list" ]
 then
 	echo "Raw and filtered assemblies names do not match.
 	Raw assemblies identifiers: "$assembly_list"
-
 	Filtered assemblies identifiers: "$filtered_list
 	exit 1
 fi
 
 # CDHIT_H is a float number lesser than 1
-if [[ $CDHIT_H =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]] # No entiendo como funiona pero detecta flotantes
+if [[ $CDHIT_H =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
 then
 	second_test=$(echo $CDHIT_H | awk '{if ($s <= 1 ) print "TRUE"}')
 	if [ -z $second_test ]
@@ -218,8 +208,7 @@ fi
 second_test= # This empties the variable for the next test
 
 # $KMER_COUNT is a number greater of 0
-
-if [[ $KMER_COUNT =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]] # No entiendo como funiona pero detecta flotantes
+if [[ $KMER_COUNT =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
 then
 	second_test=$(echo $KMER_COUNT | awk '{if ($s <= 1 ) print "TRUE"}')
 	if [ -z $second_test ]
@@ -234,7 +223,7 @@ fi
 second_test= # This empties the variable for the next test
 
 # IORIENT_CUTOFF is a float number lesser than 1.
-if [[ $IORIENT_CUTOFF =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]] # No entiendo como funiona pero detecta flotantes
+if [[ $IORIENT_CUTOFF =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
 then
 	second_test=$(echo $IORIENT_CUTOFF | awk '{if ($s <= 1 ) print "TRUE"}')
 	if [ -z $second_test ]
@@ -282,7 +271,7 @@ then
 else
 	if [ -d $OUT_DIR ]
  	then
- 		echo "There already is an output directory named: "$OUT_DIR ###### No funciona y no se por qué
+ 		echo "There already is an output directory named: "$OUT_DIR
 	 	exit 1
 	fi
 fi
@@ -362,8 +351,6 @@ mkdir $OUT_DIR/Results/Raw_Matches
 #Warnings
 mkdir $OUT_DIR/Warnings
 
-### Working variables (created using the user given options)
-
 # This for construct BLAST refferences databases that are going to be used latter to retrieve transcripts matching the produced Hooks
 echo "Constructing transcriptome references"
 for assembly in $assembly_list
@@ -374,7 +361,6 @@ done
 
 # This for counts the Kmers present on each filtered transcriptome and makes a table. To preserve the information about kmer frequency each is repeated as many times as its observed counts
 echo "Counting Kmers"
-
 for assembly in $assembly_list
 do
 	transcript_count=$(grep -c ">" $assembly$FILTERED_SET | awk '{print int($1/2)}')
@@ -390,7 +376,7 @@ echo "Combining data from all assemblies and reformatting files"
 cat $OUT_DIR/temp_files/kmer_counts/*_kmer_table2 | awk '{print "kmer_" NR " " $s}' | awk -F " " '{print ">" $1 "\n" $2}' >> $OUT_DIR/temp_files/kmer_counts/Data-set_Kmer_fasta
 
 # Assembling and filtering kooks.
-echo "Assembpling Hooks..."
+echo "Assembling Hooks..."
 Trinity --seqType fa --max_memory $T_MAX_MEM"G" --single $OUT_DIR/temp_files/kmer_counts/Data-set_Kmer_fasta --CPU $THREADS --output $OUT_DIR/temp_files/Hook_assembly/Data-set_Trinity --no_normalize_reads --KMER_SIZE $INCHWORM_KMER --no_run_chrysalis
 sed 's/;/-/' $OUT_DIR/temp_files/Hook_assembly/Data-set_Trinity/"inchworm.K"$INCHWORM_KMER".L"$INCHWORM_KMER".DS.fa" >> $OUT_DIR/temp_files/Hook_assembly/Hook_temp #For simplicity we keep inchworm nomenclature for the Hooks (aN;XXXX). However the semicolon is changed to prevent complications later on.
 seqkit seq -m $HOOK_MIN -o $OUT_DIR/temp_files/Hook_assembly/Hook_temp2 $OUT_DIR/temp_files/Hook_assembly/Hook_temp
@@ -413,7 +399,6 @@ do
 	test_hook=$(cut -f 1 $OUT_DIR/temp_files/Blast_search/$assembly"_Hook_Blast" | sort -u)
 	hook_total=$(echo $test_hook | tr " " "\n" | wc -l)
 	count_hook=1
-
 	for hook in $test_hook
 	do
 		echo "Procesing hook nº "$count_hook" of "$hook_total
@@ -531,4 +516,3 @@ else
 Step 1 is done!!!
 No Hook sequence passed the filters."
 fi
-date
