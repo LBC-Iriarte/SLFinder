@@ -11,7 +11,7 @@ Creates and evaluates “Hook” sequences that more likely represent SLs and re
 Aligns the sequences identified for each hook and automatically trims them to generate the more likely SLp sequences.
 
 #### SLFinder-step3
-Blast the SLp sequences against a reference transcriptome looking to verify their sequence and identify their coding location and copy number and identify the transcripts with validated SLp variants. If provided, it uses an external reference to annotate the genomic region with each SLps and discard those with matches.
+Blast the pSL sequences against a reference transcriptome looking to verify their sequence and identify their coding location and copy number and identify the transcripts with validated SLp variants. If provided, it uses an external reference to annotate the genomic region with each SLps and discard those with matches.
 
 Detailed instructions of how to run to control the SL search can be find on the SLFinder_manual.pdf
 
@@ -41,5 +41,5 @@ SLFinder's scripts does not require compiling. Only be granded execution permisi
 
 chmod +x SLFinder-step*
 
-## Citation: 
+## Citation:
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
