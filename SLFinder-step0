@@ -4,7 +4,7 @@ usage() # Help message
 	echo "This script takes Trinity assemblies and recovers the first and last pair bases of the longest issoform of each gene, according to Trinity name convention.
 	If your input data isn't a Trinity assembly you need to filter your data by other means.
 
-		usage: SL:detector-step-0.sh [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED]] | [-h]
+		usage: SL:detector-step-0 [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED]] | [-h]
 
 	Software required to have installed and accessible on the path:
 
