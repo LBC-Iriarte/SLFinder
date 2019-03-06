@@ -9,15 +9,25 @@ SL Finder is a four step pipeline of bioinformatic analyses meant to identify po
 
 •	SLFinder-step3: Blast the SLp sequences against a reference transcriptome looking to verify their sequence and identify their coding location and copy number and identify the transcripts with validated SLp variants. If provided, it uses an external reference to annotate the genomic region with each SLps and discard those with matches.
 
+Detailed instructions of how to run to control the search
+
 ## Necesary programs:
 The pipeline requires a BASH enviroment to run (i.e. UBUNTU) and the following programs installed and in the PATH:
 
 Ncbi-blast: https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download
+
 Cd-Hit: https://github.com/weizhongli/cdhit
+
 Jellyfish: https://github.com/gmarcais/Jellyfish
+
 MAFFT: https://mafft.cbrc.jp/alignment/software/source.html
+
 Salmon: https://github.com/COMBINE-lab/salmon
+
 Seqkit: https://github.com/shenwei356/seqkit
+
 Trinity: https://github.com/trinityrnaseq/trinityrnaseq/wiki
+
 Trimal: http://trimal.cgenomics.org/trimal
+
 Weblogos: http://weblogo.berkeley.edu/
