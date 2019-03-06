@@ -24,7 +24,7 @@ usage() # Help message
 	The pipeline is designed to work with multiple assemblies, but it can be constrained to a single file with the options -a and -f
 	See the documentation for details.
 
-			usage: SL:detector-step-1.sh [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED] | [-h]
+			usage: SL:detector-step-1 [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED] | [-h]
 
 	Packages required to have on the path:
 		1) BLAST+
