@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 
-date
-# PATH directions (only for my testing)
-PATH=$PATH:/home/javier/programas/seq-kit
-PATH=$PATH:/home/javier/programas/cdhit
-PATH=$PATH:/home/javier/programas/trimAl/source
-
 ##### Default Parameters
-
 CDHIT_R=1
 OUT_DIR=SL-analysis
 THREADS=1
@@ -23,7 +16,7 @@ usage() # Help message
 	This section of the code is separated from the rest to allow to be re-run with different filtering parameters and/or conduct manual curation of this alignments, previous to seek matches in a reference genome in Step 3.
 	Alignments requiring manual curation are reported in the file 'Step2_Problematic-Alignments'. To assist on the manual curation, a Sequence Logos of each alignment is generated using Weblogos.
 
-		usage: SL:detector-step-2.sh [PARAMETERS] | [-h]
+		usage: SL:detector-step-2 [PARAMETERS] | [-h]
 
 	Packages required to have on the path:
 		1) CD-HIT
@@ -87,8 +80,8 @@ done
 hash mafft 2>/dev/null || { echo >&2 "Mafft seems to not been installed or added to the Path. Aborting."; exit 1; }
 hash seqkit 2>/dev/null || { echo >&2 "Seqkit seems to not been installed or added to the Path. Aborting."; exit 1; }
 hash cd-hit-est 2>/dev/null || { echo >&2 "Cd-hit-est seems to not been installed or added to the Path. Aborting."; exit 1; }
-hash weblogo 2>/dev/null || { echo >&2 "Weblogoseems to not been installed or added to the Path. Aborting."; exit 1; }
-hash trimal 2>/dev/null || { echo >&2 "Weblogoseems to not been installed or added to the Path. Aborting."; exit 1; }
+hash weblogo 2>/dev/null || { echo >&2 "Weblogoseems seems to not been installed or added to the Path. Aborting."; exit 1; }
+hash trimal 2>/dev/null || { echo >&2 "Trimal seems to not been installed or added to the Path. Aborting."; exit 1; }
 
 # OUT_DIR exists and there is no other
 if [ -z $OUT_DIR ]
@@ -96,15 +89,15 @@ then
 	echo "No OUT_DIR detected. Something must be wrong with the given command (eg. whitespaces)"
 	exit 1
 else
-		if [ ! -d $OUT_DIR ]
-		then
-				echo "There is no directory named: "$OUT_DIR
-				exit 1
-		fi
+	if [ ! -d $OUT_DIR ]
+	then
+		echo "There is no directory named: "$OUT_DIR
+		exit 1
+	fi
 fi
 
 # GAP_TRIMAL is a float number lesser or equal to 1
-if [[ $GAP_TRIMAL =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]] # No entiendo como funiona pero detecta flotantes
+if [[ $GAP_TRIMAL =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
 then
 	second_test=$(echo $CDHIT_R | awk '{if ($s <= 1 ) print "TRUE"}')
 	if [ -z $second_test ]
@@ -139,10 +132,10 @@ then
 	echo "-t value must be an integir: " $THREADS
 	exit 1
 else
-		if [ $THREADS -eq 0 ]
-		then
-			echo "Invalid -t value: "$THREADS
-			exit 1
+	if [ $THREADS -eq 0 ]
+	then
+		echo "Invalid -t value: "$THREADS
+		exit 1
 	fi
 fi
 
@@ -152,10 +145,10 @@ then
 	echo "-m value must be an integir: " $MIN_RAW
 	exit 1
 else
-		if [ $MIN_RAW -eq 0 ]
-		then
-			echo "Invalid -m value: "$MIN_RAW
-			exit 1
+	if [ $MIN_RAW -eq 0 ]
+	then
+		echo "Invalid -m value: "$MIN_RAW
+		exit 1
 	fi
 fi
 
@@ -165,15 +158,15 @@ then
 	echo "-tm value must be an integir: " $MIN_TRIMAL
 	exit 1
 else
-		if [ $MIN_TRIMAL -eq 0 ]
-		then
-			echo "Invalid -tm value: "$MIN_TRIMAL
-			exit 1
+	if [ $MIN_TRIMAL -eq 0 ]
+	then
+		echo "Invalid -tm value: "$MIN_TRIMAL
+		exit 1
 	fi
 fi
 
 # CDHIT_R is a float number lesser than 1
-if [[ $CDHIT_R =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]] # No entiendo como funiona pero detecta flotantes
+if [[ $CDHIT_R =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
 then
 	second_test=$(echo $CDHIT_R | awk '{if ($s <= 1 ) print "TRUE"}')
 	if [ -z $second_test ]
@@ -220,7 +213,6 @@ mkdir $OUT_DIR/Results/weblogos/alignments
 mkdir $OUT_DIR/Results/weblogos/trimed_aligment
 
 ### Working variables (created using the user given options)
-
 rawdata_list=$(ls $OUT_DIR/Results/Raw_Matches | grep "-sequence" | sed "s/-sequence//" )
 
 echo "The following Hook datasets require closer inspection. Try playing with trimal filtering options (-tg and -ts) and or user manual inspection:
@@ -243,7 +235,7 @@ do
 
 		#To prevent crashes, if the trimal file is empty I delete it.
 		empty_file=$(grep -c ">"  $OUT_DIR/temp_files/trimal_raw/$seqfile".trimal-raw")
-	    echo "Deleting empty files"
+		echo "Deleting empty files"
 
 		if [ $empty_file -eq 0 ]
 		then
@@ -295,7 +287,6 @@ do
 done
 
 # Check if any dataset passed the filters:
-
 if [ ! -z $abemus_data ]
 then
 	# Trimmed seq stats
@@ -314,5 +305,3 @@ else
 	No data passed automatic trimming. Change -tg and/or -ts and re-run this step. Depending on you data you might need to re-run this script several times, trimming the 5' region or manually curate the alignment.
 	Check the documentation for more information"
 fi
-
-date
