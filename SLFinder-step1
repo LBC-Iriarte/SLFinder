@@ -16,7 +16,6 @@ THREADS=1
 SEQTRIMM=50
 
 ##### Usage
-
 usage() # Help message
 {
 	echo "This script takes filtered transcriptomes to generate potential Spliced Leaders sequences (or hooks) using assembled common kmers and then retrieves similar sequences present on the original assemblies.
