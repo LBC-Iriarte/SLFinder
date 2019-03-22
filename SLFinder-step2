@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 ##### Default Parameters
 CDHIT_R=1
 OUT_DIR=SL-analysis
@@ -12,33 +11,33 @@ MIN_TRIMAL=15
 ##### Usage
 usage() # Help message
 {
-	echo "This script takes the Raw matches obtanined from the Best Hooks in Step one and aligns them using MAFFT. The alignments are then trimmed automatically with Trimal.
-	This section of the code is separated from the rest to allow to be re-run with different filtering parameters and/or conduct manual curation of this alignments, previous to seek matches in a reference genome in Step 3.
-	Alignments requiring manual curation are reported in the file 'Step2_Problematic-Alignments'. To assist on the manual curation, a Sequence Logos of each alignment is generated using Weblogos.
+	echo "usage: SL:detector-step-2 [PARAMETERS] | [-h]
+	
+This script takes the Raw matches obtanined from the Best Hooks in Step one and aligns them using MAFFT. The alignments are then trimmed automatically with Trimal.
+This section of the code is separated from the rest to allow to be re-run with different filtering parameters and/or conduct manual curation of this alignments, previous to seek matches in a reference genome in Step 3.
+Alignments requiring manual curation are reported in the file 'Step2_Problematic-Alignments'. To assist on the manual curation, a Sequence Logos of each alignment is generated using Weblogos.
 
-		usage: SL:detector-step-2 [PARAMETERS] | [-h]
+Packages required to have on the path:
+	1) CD-HIT
+	2) MAFFT
+	3) Seqkit
+	4) WEBLOGOS
+	5) Trimal
 
-	Packages required to have on the path:
-		1) CD-HIT
-		2) MAFFT
-		3) Seqkit
-		4) WEBLOGOS
-		5) Trimal
+Filtering Options:
+	-c, --cdhitR	CD-HIT-EST sequence identity threshold used for the raw Hook matches (Default: 1)
+	-m, --minimun	Minimal Raw Match length to consider (Default: 15, same as '-ba' option on SLFinder-step1)
+	-ts, --trimalsm	Similarity score used in Trimal to authomaticaly trim the alignments (Default: 0.001)
+	-tg, --trimalgap	Gap threshold used in Trimal to authomaticaly trim the alignments (Default: 0.90)
+	-tm, --trimmin	Minimal trimmed sequence length (Default: 15)
 
-	Filtering Options:
-		-c, --cdhitR	CD-HIT-EST sequence identity threshold used for the raw Hook matches (Default: 1)
-		-m, --minimun	Minimal Raw Match length to consider (Default: 15, same as '-ba' option on SLFinder-step1)
-		-ts, --trimalsm	Similarity score used in Trimal to authomaticaly trim the alignments (Default: 0.001)
-		-tg, --trimalgap	Gap threshold used in Trimal to authomaticaly trim the alignments (Default: 0.90)
-		-tm, --trimmin	Minimal trimmed sequence length (Default: 15)
-
-	Other Options:
-		-o, --outdir	Directory where to store the output and temporary files from the previous step (Default: SL-analysis)
-		-t, --threads	Number of processors to use when possible (cd-hit-est, MAFFT) (Default=1)
-		-w, --weblogos	Weglogos output extension (Default: _weblogos)
-		-h, --help		This help message.
-				"
-				 exit
+Other Options:
+	-o, --outdir	Directory where to store the output and temporary files from the previous step (Default: SL-analysis)
+	-t, --threads	Number of processors to use when possible (cd-hit-est, MAFFT) (Default=1)
+	-w, --weblogos	Weglogos output extension (Default: _weblogos)
+	-h, --help		This help message.
+"
+exit
 }
 
 ##### Parameter reading
@@ -74,7 +73,6 @@ while [ "$1" != "" ]; do
 		esac
 		shift
 done
-
 
 # Checking if all programs are installed
 hash mafft 2>/dev/null || { echo >&2 "Mafft seems to not been installed or added to the Path. Aborting."; exit 1; }
@@ -191,6 +189,7 @@ fi
 
 ##### Program execution
 ### Removing previous run
+echo "Removing previous run"
 rm -r $OUT_DIR/temp_files/filtered_matches
 rm -r $OUT_DIR/temp_files/trimal_raw
 rm -r $OUT_DIR/Results/weblogos
@@ -201,6 +200,7 @@ rm $OUT_DIR/Results/Step2_Trimal-Stats
 rm $OUT_DIR/temp_files/Step2_Trimal-Stats-temp
 
 ### Creation of necesary directories
+echo "Creating new output directories"
 # Temporal files
 mkdir $OUT_DIR/temp_files/filtered_matches
 mkdir $OUT_DIR/temp_files/trimal_raw
@@ -236,7 +236,6 @@ do
 		#To prevent crashes, if the trimal file is empty I delete it.
 		empty_file=$(grep -c ">"  $OUT_DIR/temp_files/trimal_raw/$seqfile".trimal-raw")
 		echo "Deleting empty files"
-
 		if [ $empty_file -eq 0 ]
 		then
 			echo $seqfile" Trimal generated an empty file. The alignment likely requeres manual curation or to be discarded" >> $OUT_DIR/Warnings/Step2_Manual-curation ### Important file at the end
@@ -246,13 +245,9 @@ do
 done
 
 # Evaluating trimal results.
-
 abemus_data= # If any data passes through the filters this variable becomes TRUE
-echo $OUT_DIR
-echo $OUT_DIR/temp_files/trimal_raw/
 seqkit stats -T $OUT_DIR/temp_files/trimal_raw/* | sed "s/$OUT_DIR\/temp_files\/trimal_raw\///" >> $OUT_DIR/temp_files/Step2_Trimal-Stats-temp
 trimmed_list=$(ls $OUT_DIR/temp_files/trimal_raw/*".trimal-raw" | sed "s/.trimal-raw//" | sed "s/$OUT_DIR\/temp_files\/trimal_raw\///" )
-
 for seqfile2 in $trimmed_list
 do
 	seq_len=$(grep $seqfile2".trimal-raw" $OUT_DIR/temp_files/Step2_Trimal-Stats-temp | cut -f 8)
@@ -297,11 +292,12 @@ then
 	sl_count=$(grep -c ">" $OUT_DIR/Results/Hook_variants/"Hook_all_variants.fa")
 	echo $sl_count "Potential SLs has been added to the SL_all_variants.fa file
 
-	Step 2 is done! Please evaluate the results before running Step 3. Depending on you data you might need to re-run this script -g and/or -s or manually curate the alignment.
-	Check the documentation for more information"
+Step 2 is done! Please evaluate the results before running Step 3. Depending on you data you might need to re-run this script -g and/or -s or manually curate the alignment.
+Check the documentation for more information"
 else
 	# Report failure
 	echo "
-	No data passed automatic trimming. Change -tg and/or -ts and re-run this step. Depending on you data you might need to re-run this script several times, trimming the 5' region or manually curate the alignment.
-	Check the documentation for more information"
+No data passed automatic trimming. Change -tg and/or -ts and re-run this step. Depending on you data you might need to re-run this script several times, trimming the 5' region or manually curate the alignment.
+Check the documentation for more information"
 fi
+exit
