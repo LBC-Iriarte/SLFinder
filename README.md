@@ -19,13 +19,21 @@ Detailed instructions of how to run to control the SL search can be find on the 
 The pipeline requires a BASH enviroment to run (i.e. UBUNTU) and the following programs installed and in the PATH:
 
 Ncbi-blast: https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download
+
 Cd-Hit: https://github.com/weizhongli/cdhit
+
 Jellyfish: https://github.com/gmarcais/Jellyfish
+
 MAFFT: https://mafft.cbrc.jp/alignment/software/source.html
+
 Salmon: https://github.com/COMBINE-lab/salmon
+
 Seqkit: https://github.com/shenwei356/seqkit
+
 Trinity: https://github.com/trinityrnaseq/trinityrnaseq/wiki
+
 Trimal: http://trimal.cgenomics.org/trimal
+
 Weblogos: http://weblogo.berkeley.edu/
 
 ## Instalation
