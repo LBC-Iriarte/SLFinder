@@ -647,5 +647,4 @@ fi
 
 echo "
 Step 3 is done!!! Thanks for using this pipeline"
-
 exit
