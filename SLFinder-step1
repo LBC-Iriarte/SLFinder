@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # Default values
 ASSEMBLIES=_Trinity.fasta
 BLAST_I=90
@@ -17,6 +16,7 @@ THREADS=1
 SEQTRIMM=50
 
 ##### Usage
+
 usage() # Help message
 {
 	echo "This script takes filtered transcriptomes to generate potential Spliced Leaders sequences (or hooks) using assembled common kmers and then retrieves similar sequences present on the original assemblies.
@@ -24,7 +24,7 @@ usage() # Help message
 	The pipeline is designed to work with multiple assemblies, but it can be constrained to a single file with the options -a and -f
 	See the documentation for details.
 
-			usage: SL:detector-step-1 [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED] | [-h]
+			usage: SL:detector-step-1.sh [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED] | [-h]
 
 	Packages required to have on the path:
 		1) BLAST+
@@ -51,7 +51,7 @@ usage() # Help message
 		-i, --iorent	Percentage of cut off of for the Orientation Index (Default: 0.95)
 
 	Other options:
-		-s, --seqtrimm	Trimm Raw matches larger than X, counting from the match more central coordinate. Must be at least 20pb long (Default: 50) ### Necesito una mejor forma de describirlo
+		-s, --seqtrimm	Trimm Raw matches larger than X, counting from the match (Default: 50) ### Necesito una mejor forma de describirlo
 		-M, --Tmaxmemory	Suggested max memory for trinity in Gigabytes (Default: 1)
 		-t, --threads	Number of processors to use when possible (Blast, cd-hit-est and Trinity)
 		-h, --help	This help message.
@@ -59,7 +59,7 @@ usage() # Help message
 		 exit
 }
 
-##### Parameter reading
+##### Reading Parameters
 while [ "$1" != "" ]; do
 	case $1 in
 		-a | --assembly )		shift
@@ -162,7 +162,7 @@ else
 	fi
 fi
 
-# BLAST_I is a number greater of 0
+# BLAST_I is a number greater of 0 and less of 100
 if [[ ! "$BLAST_I" =~ ^[0-9]+$ ]]
 then
 	echo "-bi value must be an integir: " $BLAST_I
@@ -188,12 +188,13 @@ if [ ! "$filtered_list" == "$assembly_list" ]
 then
 	echo "Raw and filtered assemblies names do not match.
 	Raw assemblies identifiers: "$assembly_list"
+
 	Filtered assemblies identifiers: "$filtered_list
 	exit 1
 fi
 
 # CDHIT_H is a float number lesser than 1
-if [[ $CDHIT_H =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
+if [[ $CDHIT_H =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]] # No entiendo como funiona pero detecta flotantes
 then
 	second_test=$(echo $CDHIT_H | awk '{if ($s <= 1 ) print "TRUE"}')
 	if [ -z $second_test ]
@@ -207,7 +208,7 @@ else
 fi
 second_test= # This empties the variable for the next test
 
-# $KMER_COUNT is a number greater of 0
+# $KMER_COUNT is a float number lesser than 1.
 if [[ $KMER_COUNT =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
 then
 	second_test=$(echo $KMER_COUNT | awk '{if ($s <= 1 ) print "TRUE"}')
@@ -223,7 +224,7 @@ fi
 second_test= # This empties the variable for the next test
 
 # IORIENT_CUTOFF is a float number lesser than 1.
-if [[ $IORIENT_CUTOFF =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
+if [[ $IORIENT_CUTOFF =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]] # No entiendo como funiona pero detecta flotantes
 then
 	second_test=$(echo $IORIENT_CUTOFF | awk '{if ($s <= 1 ) print "TRUE"}')
 	if [ -z $second_test ]
@@ -263,7 +264,7 @@ else
 	fi
 fi
 
-# OUT_DIR exists and there is no other
+# OUT_DIR name is provided and it doesn't exist
 if [ -z $OUT_DIR ]
 then
 	echo "No OUT_DIR detected. Something must be wrong with the given command (eg. whitespaces)"
@@ -271,7 +272,7 @@ then
 else
 	if [ -d $OUT_DIR ]
  	then
- 		echo "There already is an output directory named: "$OUT_DIR
+ 		echo "There already is an output directory named: "$OUT_DIR ###### No funciona y no se por qué
 	 	exit 1
 	fi
 fi
@@ -302,7 +303,7 @@ else
 	fi
 fi
 
-# INCHWORM_KMER is a valid number
+# INCHWORM_KMER is a valid number (integir between 10 and 32)
 if [[ ! "$INCHWORM_KMER" =~ ^[0-9]+$ ]]
 then
 	echo "-ki value must be an integir: " $INCHWORM_KMER
@@ -330,7 +331,6 @@ else
 fi
 
 ##### Program execution
-
 ###Creation of necesary directories
 mkdir $OUT_DIR
 
@@ -351,6 +351,7 @@ mkdir $OUT_DIR/Results/Raw_Matches
 #Warnings
 mkdir $OUT_DIR/Warnings
 
+### Working variables (created using the user given options)
 # This for construct BLAST refferences databases that are going to be used latter to retrieve transcripts matching the produced Hooks
 echo "Constructing transcriptome references"
 for assembly in $assembly_list
@@ -376,7 +377,7 @@ echo "Combining data from all assemblies and reformatting files"
 cat $OUT_DIR/temp_files/kmer_counts/*_kmer_table2 | awk '{print "kmer_" NR " " $s}' | awk -F " " '{print ">" $1 "\n" $2}' >> $OUT_DIR/temp_files/kmer_counts/Data-set_Kmer_fasta
 
 # Assembling and filtering kooks.
-echo "Assembling Hooks..."
+echo "Assembpling Hooks..."
 Trinity --seqType fa --max_memory $T_MAX_MEM"G" --single $OUT_DIR/temp_files/kmer_counts/Data-set_Kmer_fasta --CPU $THREADS --output $OUT_DIR/temp_files/Hook_assembly/Data-set_Trinity --no_normalize_reads --KMER_SIZE $INCHWORM_KMER --no_run_chrysalis
 sed 's/;/-/' $OUT_DIR/temp_files/Hook_assembly/Data-set_Trinity/"inchworm.K"$INCHWORM_KMER".L"$INCHWORM_KMER".DS.fa" >> $OUT_DIR/temp_files/Hook_assembly/Hook_temp #For simplicity we keep inchworm nomenclature for the Hooks (aN;XXXX). However the semicolon is changed to prevent complications later on.
 seqkit seq -m $HOOK_MIN -o $OUT_DIR/temp_files/Hook_assembly/Hook_temp2 $OUT_DIR/temp_files/Hook_assembly/Hook_temp
@@ -390,9 +391,7 @@ do
 done
 
 echo "Counting Hook Matches per location"
-
 # Columns Registry-Orientacion.tab: Hook; Start-Foward; Start-Reverse; End-Foward; End-Reverse
-
 for assembly in $assembly_list
 do
 	echo $assembly
@@ -474,39 +473,34 @@ Extracting "$hook" Matches"
 		check_5primaforward=$(wc -l $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-5prima-forward_sequence_extract" | cut -f 1 -d " " )
 		if [ $check_5primaforward -gt 0 ]
 		then
-			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -out $OUT_DIR/temp_files/Sequence/$assembly"_"$hook"-5prima-forward-sequence-temp" -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-5prima-forward_sequence_extract"
 			echo "Procesing: "$hook"-5prima-forward"
-			sed "s/>/'>5prima-forward_'$hook'_origin:'$assembly'_'/" $OUT_DIR/temp_files/Sequence/$assembly"_"$hook"-5prima-forward-sequence-temp" | tr -d "'" | seqkit subseq -r "-"$SEQTRIMM":-1" >> $OUT_DIR/Results/Raw_Matches/$hook"-5prima-forward-sequence"
+			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-5prima-forward_sequence_extract" | sed "s/>/'>5prima-forward_'$hook'_origin:'$assembly'_'/" | tr -d "'" | seqkit subseq -r "-"$SEQTRIMM":-1" >> $OUT_DIR/Results/Raw_Matches/$hook"-5prima-forward-sequence"
 		fi
 
 		check_5primareverse=$(wc -l $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-5prima-reverse_sequence_extract" | cut -f 1 -d " " )
 		if [ $check_5primareverse -gt 0 ]
 		then
-			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -out $OUT_DIR/temp_files/Sequence/$assembly"_"$hook"-5prima-reverse-sequence-temp" -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-5prima-reverse_sequence_extract"
 			echo "Procesing: "$hook"-5prima-reverse"
-			sed "s/>/'>5prima-reverse_'$hook'_origin:'$assembly'_'/" $OUT_DIR/temp_files/Sequence/$assembly"_"$hook"-5prima-reverse-sequence-temp" | tr -d "'" | seqkit subseq -r "-"$SEQTRIMM":-1" >> $OUT_DIR/Results/Raw_Matches/$hook"-5prima-reverse-sequence"
+			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-5prima-reverse_sequence_extract" | sed "s/>/'>5prima-reverse_'$hook'_origin:'$assembly'_'/" | tr -d "'" | seqkit subseq -r "-"$SEQTRIMM":-1" >> $OUT_DIR/Results/Raw_Matches/$hook"-5prima-reverse-sequence"
 		fi
 
 		check_3primaforward=$(wc -l $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-forward_sequence_extract" | cut -f 1 -d " " )
 		if [ $check_3primaforward -gt 0 ]
 		then
-			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -out $OUT_DIR/temp_files/Sequence/$assembly"_"$hook"-3prima-forward-sequence-temp" -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-forward_sequence_extract"
 			echo "Procesing: "$hook"-3prima-forward"
-			sed "s/>/'>3prima-forward_'$hook'_origin:'$assembly'_'/" $OUT_DIR/temp_files/Sequence/$assembly"_"$hook"-3prima-forward-sequence-temp" | tr -d "'" | seqkit subseq -r "1:"$SEQTRIMM >> $OUT_DIR/Results/Raw_Matches/$hook"-3prima-forward-sequence"
+			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-forward_sequence_extract" | sed "s/>/'>3prima-forward_'$hook'_origin:'$assembly'_'/" | tr -d "'" | seqkit subseq -r "1:"$SEQTRIMM >> $OUT_DIR/Results/Raw_Matches/$hook"-3prima-forward-sequence"
 		fi
 
 		check_3primaforward=$(wc -l $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-reverse_sequence_extract" | cut -f 1 -d " " )
 		if [ $check_3primaforward -gt 0 ]
 		then
-			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -out $OUT_DIR/temp_files/Sequence/$assembly"_"$hook"-3prima-reverse-sequence-temp" -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-reverse_sequence_extract"
 			echo "Procesing: "$hook"-3prima-reverse"
-			sed "s/>/'>3prima-reverse_'$hook'_origin:'$assembly'_'/" $OUT_DIR/temp_files/Sequence/$assembly"_"$hook"-3prima-reverse-sequence-temp" | tr -d "'" | seqkit subseq -r "1:"$SEQTRIMM >> $OUT_DIR/Results/Raw_Matches/$hook"-3prima-reverse-sequence"
+			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-reverse_sequence_extract" | sed "s/>/'>3prima-reverse_'$hook'_origin:'$assembly'_'/" | tr -d "'" | seqkit subseq -r "1:"$SEQTRIMM >> $OUT_DIR/Results/Raw_Matches/$hook"-3prima-reverse-sequence"
 		fi
 	done
 done
 
 check_best_hooks=$(wc -l $OUT_DIR/Results/Step1-Best_Candidates | cut -f 1 -d " ")
-
 if [ $check_best_hooks -gt 1 ]
 then
 	echo "
@@ -516,3 +510,5 @@ else
 Step 1 is done!!!
 No Hook sequence passed the filters."
 fi
+
+exit
