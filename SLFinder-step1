@@ -18,44 +18,44 @@ SEQTRIMM=50
 ##### Usage
 usage() # Help message
 {
-	echo "This script takes filtered transcriptomes to generate potential Spliced Leaders sequences (or hooks) using assembled common kmers and then retrieves similar sequences present on the original assemblies.
-	The best hooks are then selected for future analyses based on the consistency on their orientation across multiple transcripts and their frequency.
-	The pipeline is designed to work with multiple assemblies, but it can be constrained to a single file with the options -a and -f
-	See the documentation for details.
+	echo "usage: SL:detector-step-1.sh [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED] | [-h]
 
-			usage: SL:detector-step-1.sh [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED] | [-h]
+This script takes filtered transcriptomes to generate potential Spliced Leaders sequences (or hooks) using assembled common kmers and then retrieves similar sequences present on the original assemblies.
+The best hooks are then selected for future analyses based on the consistency on their orientation across multiple transcripts and their frequency.
+The pipeline is designed to work with multiple assemblies, but it can be constrained to a single file with the options -a and -f
+See the documentation for details.
 
-	Packages required to have on the path:
-		1) BLAST+
-	 	2) CD-HIT
-	 	3) MAFFT
-	 	4) Seqkit
-		5) Trinity (And the programs Jellyfish and Salmon that needs to work)
+Packages required to have on the path:
+	1) BLAST+
+ 	2) CD-HIT
+ 	3) MAFFT
+ 	4) Seqkit
+	5) Trinity (And the programs Jellyfish and Salmon that needs to work)
 
-	Input/Output Options:
-	 	-a, --asembly	String used to identify unfiltered transcriptome assemblies (Default: Trinity.fasta)
-		-f, --filtered	String used to identify the filtered sequences (Default: Trinity.filtered)
-		-o, --outdir	Directory where to store the output and temporary files (Default: SL-analysis)
+Input/Output Options:
+ 	-a, --asembly	String used to identify unfiltered transcriptome assemblies (Default: Trinity.fasta)
+	-f, --filtered	String used to identify the filtered sequences (Default: Trinity.filtered)
+	-o, --outdir	Directory where to store the output and temporary files (Default: SL-analysis)
 
-	Hook Assembly Options
-		-c, --cdhitH	cd-hit-est sequence identity threshold used for Hook filtration (Default: 1)
-		-kc, --kmercount	Minimal kmer observations required to be analyzed. It must be a float number representing the percentage of transcripts that should have the kmer (Default: 0.0005)
-		-kl, --kmerlenght	Kmer lenght to be considered (Default: 20)
-		-ki, --inchwormk	Kmer length used by Inchworm for Hook assembly. Must be between 10 and 32 and be smaller than -kl (Default: 5)
-		-m, --hookmin	Minimal hook length to analyze (Default: 20)
+Hook Assembly Options
+	-c, --cdhitH	cd-hit-est sequence identity threshold used for Hook filtration (Default: 1)
+	-kc, --kmercount	Minimal kmer observations required to be analyzed. It must be a float number representing the percentage of transcripts that should have the kmer (Default: 0.0005)
+	-kl, --kmerlenght	Kmer lenght to be considered (Default: 20)
+	-ki, --inchwormk	Kmer length used by Inchworm for Hook assembly. Must be between 10 and 32 and be smaller than -kl (Default: 5)
+	-m, --hookmin	Minimal hook length to analyze (Default: 20)
 
-	Filtering Options
-		-bi, --blastnI	BLASTn Identity threshold used to identify Hook matches in the unfiltered transcriptome (Default: 90)
-		-ba, --blastnA	Minimum hook Match length (Default: 15)
-		-i, --iorent	Percentage of cut off of for the Orientation Index (Default: 0.95)
+Filtering Options
+	-bi, --blastnI	BLASTn Identity threshold used to identify Hook matches in the unfiltered transcriptome (Default: 90)
+	-ba, --blastnA	Minimum hook Match length (Default: 15)
+	-i, --iorent	Percentage of cut off of for the Orientation Index (Default: 0.95)
 
-	Other options:
-		-s, --seqtrimm	Trimm Raw matches larger than X, counting from the match (Default: 50) ### Necesito una mejor forma de describirlo
-		-M, --Tmaxmemory	Suggested max memory for trinity in Gigabytes (Default: 1)
-		-t, --threads	Number of processors to use when possible (Blast, cd-hit-est and Trinity)
-		-h, --help	This help message.
-		"
-		 exit
+Other options:
+	-s, --seqtrimm	Trimm Raw matches larger than X, counting from the match (Default: 50) ### Necesito una mejor forma de describirlo
+	-M, --Tmaxmemory	Suggested max memory for trinity in Gigabytes (Default: 1)
+	-t, --threads	Number of processors to use when possible (Blast, cd-hit-est and Trinity)
+	-h, --help	This help message.
+"
+exit
 }
 
 ##### Reading Parameters
@@ -178,7 +178,7 @@ fi
 filtered_list=$(ls *$FILTERED_SET | sed "s/$FILTERED_SET//")
 if [ -z "$filtered_list" ]
 then
-	echo "No filtered assemblies detected with the following string: *"$FILTERED_SET
+	echo "No filtered assemblies detected with the following command: ls *"$FILTERED_SET
 	exit 1
 fi
 
@@ -186,14 +186,14 @@ fi
 if [ ! "$filtered_list" == "$assembly_list" ]
 then
 	echo "Raw and filtered assemblies names do not match.
-	Raw assemblies identifiers: "$assembly_list"
+Raw assemblies identifiers: "$assembly_list"
 
-	Filtered assemblies identifiers: "$filtered_list
+Filtered assemblies identifiers: "$filtered_list
 	exit 1
 fi
 
 # CDHIT_H is a float number lesser than 1
-if [[ $CDHIT_H =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]] # No entiendo como funiona pero detecta flotantes
+if [[ $CDHIT_H =~ ([0-9]+\.?[0-9]*)|([0-9]*\.[0-9]+) ]]
 then
 	second_test=$(echo $CDHIT_H | awk '{if ($s <= 1 ) print "TRUE"}')
 	if [ -z $second_test ]
@@ -202,7 +202,7 @@ then
 		exit 1
 	fi
 else
-	echo "-c value must be a float number" $CDHIT_H
+	echo "-c value must be a float number "$CDHIT_H
 	exit 1
 fi
 second_test= # This empties the variable for the next test
@@ -217,7 +217,7 @@ then
 		exit 1
 	fi
 else
-	echo "-kc value must be a float number" $KMER_COUNT
+	echo "-kc value must be a float number "$KMER_COUNT
 	exit 1
 fi
 second_test= # This empties the variable for the next test
@@ -240,7 +240,7 @@ second_test= # This empties the variable for the next test
 # $KMER_COUNT is a number greater of 0
 if [[ ! "$KMER_LENGHT" =~ ^[0-9]+$ ]]
 then
-	echo "-kc value must be an integir: " $KMER_LENGHT
+	echo "-kc value must be an integir: "$KMER_LENGHT
 	exit 1
 else
 	if [ $KMER_LENGHT -eq 0 ]
@@ -253,7 +253,7 @@ fi
 # HOOK_MIN is a valid number
 if [[ ! "$HOOK_MIN" =~ ^[0-9]+$ ]]
 then
-	echo "-m value must be an integir: " $HOOK_MIN
+	echo "-m value must be an integir: "$HOOK_MIN
 	exit 1
 else
 	if [ $HOOK_MIN -eq 0 ]
@@ -271,7 +271,7 @@ then
 else
 	if [ -d $OUT_DIR ]
  	then
- 		echo "There already is an output directory named: "$OUT_DIR ###### No funciona y no se por qué
+ 		echo "There already is an output directory named: "$OUT_DIR
 	 	exit 1
 	fi
 fi
@@ -279,7 +279,7 @@ fi
 # THREADS is a valid number
 if [[ ! "$THREADS" =~ ^[0-9]+$ ]]
 then
-	echo "-t value must be an integir: " $THREADS
+	echo "-t value must be an integir: "$THREADS
 	exit 1
 else
 	if [ $THREADS -eq 0 ]
@@ -292,7 +292,7 @@ fi
 # T_MAX_MEM is a valid number
 if [[ ! "$T_MAX_MEM" =~ ^[0-9]+$ ]]
 then
-	echo "-M value must be an integir: " $T_MAX_MEM
+	echo "-M value must be an integir: "$T_MAX_MEM
 	exit 1
 else
 	if [ $T_MAX_MEM -eq 0 ]
@@ -305,7 +305,7 @@ fi
 # INCHWORM_KMER is a valid number (integir between 10 and 32)
 if [[ ! "$INCHWORM_KMER" =~ ^[0-9]+$ ]]
 then
-	echo "-ki value must be an integir: " $INCHWORM_KMER
+	echo "-ki value must be an integir: "$INCHWORM_KMER
 	exit 1
 else
 	if [ ! $INCHWORM_KMER -ge 10 ] && [ $INCHWORM_KMER -le 32 ] && [ $KMER_LENGHT -gt $INCHWORM_KMER ]
@@ -331,6 +331,7 @@ fi
 
 ##### Program execution
 ###Creation of necesary directories
+echo "Creating noutput directories"
 mkdir $OUT_DIR
 
 # Temporal files
@@ -350,7 +351,6 @@ mkdir $OUT_DIR/Results/Raw_Matches
 #Warnings
 mkdir $OUT_DIR/Warnings
 
-### Working variables (created using the user given options)
 # This for construct BLAST refferences databases that are going to be used latter to retrieve transcripts matching the produced Hooks
 echo "Constructing transcriptome references"
 for assembly in $assembly_list
@@ -372,7 +372,7 @@ do
 done
 echo "Combining data from all assemblies and reformatting files"
 
-#This line combines the information from each filtered assembly and re-formats it as a fasta file. Each kmer is named after the line number on the concatenated file
+# Merging all assemblies data and reformating. Each kmer is named after the line number on the concatenated file.
 cat $OUT_DIR/temp_files/kmer_counts/*_kmer_table2 | awk '{print "kmer_" NR " " $s}' | awk -F " " '{print ">" $1 "\n" $2}' >> $OUT_DIR/temp_files/kmer_counts/Data-set_Kmer_fasta
 
 # Assembling and filtering kooks.
@@ -509,5 +509,4 @@ else
 Step 1 is done!!!
 No Hook sequence passed the filters."
 fi
-
 exit
