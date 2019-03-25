@@ -385,9 +385,9 @@ do
 			strand=$(grep -w $hook $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | cut -f 5)
 			if [ "$strand" == "plus" ]
 			then
-				seqkit grep -p $hook"$" $SL_FILE >> $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa"
+				seqkit grep -p $hook $SL_FILE >> $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa"
 			else
-				seqkit grep -p $hook"$" $SL_FILE | seqkit seq -p -r -w 0 >> $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa"
+				seqkit grep -p $hook $SL_FILE | seqkit seq -p -r -w 0 >> $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa"
 			fi
 		done
 		mafft --quiet --globalpair --thread $THREADS --maxiterate 1000 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa" > $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci"-matches.al"
