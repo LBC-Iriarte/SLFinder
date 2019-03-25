@@ -604,12 +604,12 @@ fi
 
 if [ "$check_unclear" == "TRUE" ]
 then
-	cd-hit-est -d 0 -c 1 -T $THREADS -i $OUT_DIR/Results/Genome_locis/Unclear_SL_Loci.fa -o $OUT_DIR/temp_files/Genome_locis/Unclear_SL.fa
-	psl_loci=$(grep ">" $OUT_DIR/temp_files/Genome_locis/SL.temp | sed "s/-pSL_/\\t/" | sed "s/>//" | cut -f 2)
+	cd-hit-est -d 0 -c 1 -T $THREADS -i $OUT_DIR/Results/Genome_locis/Unclear_SL_Loci.fa -o $OUT_DIR/temp_files/Genome_locis/Unclear_SL.temp
+	psl_loci=$(grep ">" $OUT_DIR/temp_files/Genome_locis/Unclear_SL.temp | sed "s/-pSL_/\\t/" | sed "s/>//" | cut -f 2)
 	for psl in $psl_loci
 	do
 		hook_variant=$(grep -w $psl $OUT_DIR/Results/Step3_Loci.tab | cut -f 8 | sed 's/-3prima-.*//' | sed 's/-5prima-.*//')
-		seqkit grep -r -p "-pSL_"$psl"$" $OUT_DIR/temp_files/Genome_locis/Unclear_SL.fa | sed "/>/ s/$/_$hook_variant/" >> $OUT_DIR/Results/Unclear_SL.fa
+		seqkit grep -r -p "-pSL_"$psl"$" $OUT_DIR/temp_files/Genome_locis/Unclear_SL.temp | sed "/>/ s/$/_$hook_variant/" >> $OUT_DIR/Results/Unclear_SL.fa
 		echo -e $psl"\t"$hook_variant >> $OUT_DIR/temp_files/Genome_locis/SL_hooks.temp
 	done
 fi
