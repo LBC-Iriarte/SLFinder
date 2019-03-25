@@ -568,7 +568,7 @@ do
 				elif [ "$orient" == "Reverse" ]
 				then
 					printf "%s %s %s %s\n%s %s %s\n" $chromo" "$coordinates" minus" | blastdbcmd -db $OUT_DIR/temp_files/Reference/Reference_genome-ref -entry_batch - | sed "/^>/ s/$/-pSL_/" | sed "/^>/ s/$/$mat/" | tr -d " " >> $OUT_DIR/Results/Genome_locis/Best_SL_Loci.fa
-					check_best=TRUE >> issue
+					check_best=TRUE
 				fi
 			else
 				if [ "$orient" == "Forward" ]
