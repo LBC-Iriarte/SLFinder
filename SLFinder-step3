@@ -361,7 +361,7 @@ do
 		donor_site_alert=False
 		loci_start=$(grep -w $loci $OUT_DIR/temp_files/Genome_locis/Loci_location_temp | cut -f 3)
 		loci_end=$(grep -w $loci $OUT_DIR/temp_files/Genome_locis/Loci_location_temp | cut -f 4)
-		chr_end=$(grep ^$chr$'\t' $OUT_DIR/temp_files/Reference/Genome_size | grep -F -w $chr | cut -f 4)
+		chr_end=$(grep -w $chr $OUT_DIR/temp_files/Reference/Genome_size | grep -F -w $chr | cut -f 4)
 		# checking alignment start
 		if [ $loci_start -lt 2 ]
 		then
