@@ -252,7 +252,7 @@ mkdir $OUT_DIR/Results/Spliced_leader_transcripts
 ### Creating Blast Database
 echo "Constructing genome blast reference"
 makeblastdb -in $GENOME_REF -dbtype nucl -parse_seqids -input_type fasta -out $OUT_DIR/temp_files/Reference/Reference_genome-ref
-seqkit fx2tab -n -l $GENOME_REF >> $OUT_DIR/temp_files/Reference/Genome_size
+seqkit fx2tab -n -l -i $GENOME_REF >> $OUT_DIR/temp_files/Reference/Genome_size
 
 ### Blasting pSLs to the Reference Genome (100% de identidad obligatorio)
 echo "
