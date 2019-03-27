@@ -400,7 +400,7 @@ do
 		Count_seq_Forward=$(grep -i -c $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 2)
 		Count_seq_Reverse=$(grep -i -c $loci_sequence_R $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 2)
 
-		if [ $Count_seq_Forward -eq 0 ] && [ $Count_seq_Reverse -eq 0 ]
+		if [ $Count_seq_Forward -eq $Count_seq_Reverse  ]
 		then
 			seq_orient=Undeterminated
 			sed -i "/$loci\t/s/na$/Loci does not match original sequences/" $OUT_DIR/Warnings/Step3_Problematic-Loci
