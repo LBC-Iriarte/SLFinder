@@ -365,7 +365,7 @@ for assembly in $assembly_list
 do
 	transcript_count=$(grep -c ">" $assembly$FILTERED_SET | awk '{print int($1/2)}')
 	kmer_limit=$(echo $transcript_count | awk -v kc=$KMER_COUNT '{print int($1*kc)}')
-	echo -e $assembly"\tTotal de transcriptos: "$transcript_count"\tLimite kmers: "$kmer_limit
+	echo -e $assembly"\tTotal de transcriptos: "$transcript_count"\tKmers cutoff: "$kmer_limit
 	jellyfish count -s 100M -m $KMER_LENGHT -t $THREADS -C -o $OUT_DIR/temp_files/kmer_counts/$assembly"_kmer_count" $assembly$FILTERED_SET
 	jellyfish dump -c -L $kmer_limit -o $OUT_DIR/temp_files/kmer_counts/$assembly"_kmer_table" $OUT_DIR/temp_files/kmer_counts/$assembly"_kmer_count"
 	awk '{for(i=0;i<$2;i++) print}' $OUT_DIR/temp_files/kmer_counts/$assembly"_kmer_table" >> $OUT_DIR/temp_files/kmer_counts/$assembly"_kmer_table2"
