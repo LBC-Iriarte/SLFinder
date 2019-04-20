@@ -559,7 +559,7 @@ echo "
 ### Filtered hooks
 Best hooks found: "$check_best_hooks"
 CI: "$IORIENT_CUTOFF"
-Observation threshold: "$median"
+Observation count threshold: "$median"
 "  >> $OUT_DIR/Step1_Summary
 
 if [ $check_best_hooks -gt 0 ]
