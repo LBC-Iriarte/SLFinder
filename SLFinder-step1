@@ -49,7 +49,7 @@ Filtering Options
 	-bi, --blastnI	BLASTn Identity threshold used to identify Hook matches in the unfiltered transcriptome (Default: 90)
 	-ba, --blastnA	Minimum hook Match length (Default: 15)
 	-i, --iorent	Percentage of cut off of for the Orientation Index (Default: 0.95)
-	-me, --median	Filter hooks according to their median value of matches on the unfiltered transcritome: T (True) or F (False) (Default: T)
+	-me, --median	Filter hooks according to the median value of their matches count: T (True) or F (False) (Default: T)
 
 Other options:
 	-s, --seqtrimm	Trimm Raw matches larger than X, counting from the match (Default: 50) ### Necesito una mejor forma de describirlo
