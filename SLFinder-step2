@@ -193,8 +193,8 @@ echo "Removing previous run"
 rm -r $OUT_DIR/temp_files/filtered_matches
 rm -r $OUT_DIR/temp_files/trimal_raw
 rm -r $OUT_DIR/Results/weblogos
-rm -r $OUT_DIR/Results/SL_variants
 rm -r $OUT_DIR/Results/alignments
+rm -r $OUT_DIR/Results/Hook_variants
 rm $OUT_DIR/Warnings/Step2_Manual-curation
 rm $OUT_DIR/Results/Step2_Trimal-Stats
 rm $OUT_DIR/temp_files/Step2_Trimal-Stats-temp
