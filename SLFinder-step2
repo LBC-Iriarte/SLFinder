@@ -224,6 +224,7 @@ do
 	if [ $seq_count -eq 1 ]
 	then
 		echo $seqfile" Only has a single sequence" >> $OUT_DIR/Warnings/Step2_Manual-curation
+		discarded_files_list=$discarded_files_list"_"$seqfile
 	else
 		seqkit seq -m $MIN_RAW $OUT_DIR/Results/Raw_Matches/$seqfile"-sequence" -o $OUT_DIR/temp_files/filtered_matches/$seqfile".seqkit-cut"
 		cd-hit-est -c $CDHIT_R -T $THREADS -i $OUT_DIR/temp_files/filtered_matches/$seqfile".seqkit-cut" -o $OUT_DIR/temp_files/filtered_matches/$seqfile".cd-hit-est"
