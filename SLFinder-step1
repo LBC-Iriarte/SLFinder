@@ -567,7 +567,8 @@ then
 	echo "
 Step 1 is done!!! Proceed to step 2 to filter the results."
 	cat $OUT_DIR/Results/Step1-Best_Candidates >> $OUT_DIR/Step1_Summary
-	echo -e "###################################################################################
+	echo -e "
+###################################################################################
 
 Matches found:
 File\tN Sequences" >> $OUT_DIR/Step1_Summary
