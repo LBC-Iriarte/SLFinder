@@ -706,10 +706,10 @@ Annotation range: "$GENOME_REGION_RANGE"pb
 Annotation evalue cutoff: 1e-"$BLAST_EVALUE"
 " > $OUT_DIR/Step3_Summary
 
-echo $total_loci" of pSL Loci were identified during a BLAST search against the reference Genome file: "$genome_ID"
+echo $total_loci" of putuative SL Loci were identified:
 
-Donor Site detection:
-	Clear potential Donor Site: "$clear_loci_n" ("$clear_loci_manual_inspection_n" Require manual confirmation)
+Putuative Donor Site detection:
+	Clear potential Donor Site: "$clear_loci_n" ("$clear_loci_manual_inspection_n" present overlaping with its Hook Variant)
 	Unclear Donor Site: "$unclear_loci_n"
 	Not Detected: "$not_detected_loci_n"
 	Not Analyzed: "$not_analyzed_loci_n"
@@ -775,7 +775,7 @@ N Loci\tScaffold\tLoci extended length\tLoci Orientation\tHook Variants\tDonor S
 	done
 done
 
-echo "
+echo -e "
 ###################################################################################
 
 ### Discarded Loci:
@@ -784,13 +784,13 @@ echo "
 N Loci\tScaffold\tLoci extended length\tLoci Orientation\tHook Variants\tDonor Site\tBest pSL ID\tStart-Best\tEnd-Best\tAnnotation Hits\tBest Hit ID\tIdentity\tEvalue" >> $OUT_DIR/Step3_Summary
 grep -v "N Loci" $OUT_DIR/Results/Step3_Loci.tab | awk '{ if ($11 > 0 ) print}' $OUT_DIR/Results/Step3_Loci.tab >> $OUT_DIR/Step3_Summary
 
-echo "
+echo -e "
 
 # No donor site detected:
 N Loci\tScaffold\tLoci extended length\tLoci Orientation\tHook Variants\tDonor Site\tBest pSL ID\tStart-Best\tEnd-Best\tAnnotation Hits\tBest Hit ID\tIdentity\tEvalue" >> $OUT_DIR/Step3_Summary
 grep "Not detected" $OUT_DIR/Results/Step3_Loci.tab >> $OUT_DIR/Step3_Summary
 
-echo "
+echo -e "
 
 # Loci Not Analyzed:
 N Loci\tScaffold\tLoci extended length\tLoci Orientation\tHook Variants\tDonor Site\tBest pSL ID\tStart-Best\tEnd-Best\tAnnotation Hits\tBest Hit ID\tIdentity\tEvalue" >> $OUT_DIR/Step3_Summary
