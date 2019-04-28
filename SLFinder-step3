@@ -105,6 +105,8 @@ else
 	fi
 fi
 
+SL_FILE=$OUT_DIR/Results/Hook_variants/Hook_all_variants.fa
+
 # Reference genome fasta file exists, is a fasta and its not ziped
 reference_genome=$(seqkit stats $GENOME_REF) # seqkit error message already clarifies if its a format or a file existing issue
 if [ -z "$reference_genome" ]
