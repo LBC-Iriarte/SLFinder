@@ -179,3 +179,4 @@ do
 	rm $assembly'_fasta-len'
 	rm $assembly"-LongerIsoforms.fa.seqkit.fai"
 done
+exit
