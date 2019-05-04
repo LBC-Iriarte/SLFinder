@@ -529,10 +529,16 @@ Extracting "$hook" Matches"
 		# Reporting Transcripts with multiple matches
 
 		check_multi_hit=$(wc -l $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID")
-		if [ $check_3primaforward -gt 0 ]
+		if [ $check_multi_hit -gt 0 ]
 		then
 			cp $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID" $OUT_DIR/Results/Anomalous_Matches/$assembly"-"$hook"_multihit.ID"
 			seqkit grep -j $THREADS -r -f $OUT_DIR/Results/Anomalous_Matches/$assembly"-"$hook"_multihit.ID" $assembly$ASSEMBLIES >> $OUT_DIR/Results/Anomalous_Matches/$assembly"-"$hook"_multihit.fa"
+			hit_trans=$(cat $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID")
+			echo -e "Hook\tTranscript\tAlignment length\tMismatch\tStart\tEnd" >> $OUT_DIR/Results/Anomalous_Matches/$assembly"_"$hook"_BLAST"
+			for hit in $hit_trans
+			do
+				grep -w $hit $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"-Blast" | awk '{print  $1"\t"$2"\t"$3"\t"$6"\t"$7"\t"$8}' >> $OUT_DIR/Results/Anomalous_Matches/$assembly"_"$hook"_BLAST"
+			done
 			multi_hit=TRUE
 			multi_assembly=$multi_assembly"_"$assembly
 		fi
