@@ -528,7 +528,7 @@ Extracting "$hook" Matches"
 
 		# Reporting Transcripts with multiple matches
 
-		check_multi_hit=$(wc -l $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID")
+		check_multi_hit=$(grep -c . $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID")
 		if [ $check_multi_hit -gt 0 ]
 		then
 			cp $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID" $OUT_DIR/Results/Anomalous_Matches/$assembly"-"$hook"_multihit.ID"
