@@ -519,8 +519,8 @@ Extracting "$hook" Matches"
 			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-forward_sequence_extract" | sed "s/>/'>3prima-forward_'$hook'_origin:'$assembly'_'/" | tr -d "'" | seqkit subseq -r "1:"$SEQTRIMM >> $OUT_DIR/Results/Raw_Matches/$hook"-3prima-forward-sequence"
 		fi
 
-		check_3primaforward=$(wc -l $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-reverse_sequence_extract" | cut -f 1 -d " " )
-		if [ $check_3primaforward -gt 0 ]
+		check_3primareverse=$(wc -l $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-reverse_sequence_extract" | cut -f 1 -d " " )
+		if [ $check_3primareverse -gt 0 ]
 		then
 			echo "Procesing: "$hook"-3prima-reverse"
 			blastdbcmd -db $OUT_DIR/temp_files/Blast_transcript_ref/$assembly'_ref' -entry_batch $OUT_DIR/temp_files/Blast_search/$assembly"_"$hook"-3prima-reverse_sequence_extract" | sed "s/>/'>3prima-reverse_'$hook'_origin:'$assembly'_'/" | tr -d "'" | seqkit subseq -r "1:"$SEQTRIMM >> $OUT_DIR/Results/Raw_Matches/$hook"-3prima-reverse-sequence"
