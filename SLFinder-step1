@@ -400,7 +400,7 @@ do
 
 		# One hit transcripts
 		cut -f 2 $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"-Blast" | uniq -u >> $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"-ID"
-		grep -w $hook $OUT_DIR/temp_files/Blast_search/$assembly"_Hook_Blast" >> $OUT_DIR/temp_files/Blast_search/$assembly"_Filtered_Hook_Blast" ## added line
+		grep -w -f $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"-ID" $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"-Blast" >> $OUT_DIR/temp_files/Blast_search/$assembly"_Filtered_Hook_Blast"
 		grep -w -f $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"-ID" $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"-Blast" | awk -v aln=$BLAST_A '{if ($3>=aln) print }' | awk '{if ($7<$8 && $8<=100) print $1 "\t" 1 "\t" 0 "\t" 0 "\t" 0; else if ($7>$8 && $7<=100) print $1 "\t" 0 "\t" 1 "\t" 0 "\t" 0; else if ($7<$8 && $7>50 && $4-$7<=100) print $1 "\t" 0 "\t" 0 "\t" 1 "\t" 0; else if ($7>$8 && $8>50 && $4-$8<=100) print $1 "\t" 0 "\t" 0 "\t" 0 "\t" 1}' >> $OUT_DIR/temp_files/Blast_search/Orientation_Registry.tab
 		count_hook=$(( $count_hook + 1 ))
 
