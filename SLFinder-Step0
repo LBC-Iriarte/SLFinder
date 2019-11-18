@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+usage() # Help message
+{
+	echo "usage: SL:detector-step-0 [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED]] | [-h]
+
+	This script generates filters a Trinity assembly to be used by SLFinder. It takes the longest issoform of each 'gene' defined by Trinityand retrieves the XX first/last bases.
+
+	Important notes:
+	- If your assemblies weren't generated with Trinity you will need to filter your sequences by other means (see the manual).
+	- The script will generate temporal folders named 'XXX_TEMPORAL_[AssemblyID]_files' and remove them afterwards. Make sure there aren't any named this why before running SLFinder-Step0
+
+	Software required to have installed and accessible on the path:
+
+		1) Seqkit
+
+	Options:
+		-a, --assemblies	String identifying the assemblies (Default: _Trinity.fasta)
+		-f, --filtered	Output files extension (Default: _Trinity.filtered)
+		-n, --idnum	Max Number of IDs to search at a given time with seqkit grep (Default 50000)
+		-s, --seqcut	Basepairs to keep from both ends (Default: 50)
+		-t, --threads	Number of processors to use when possible (seqkit grep) (Default=1)
+		-h, --help	This help message.
+		"
+		 exit
+}
+
+##### Default Parameters
+
+ASSEMBLIES=_Trinity.fasta
+FILTERED_SET=_Trinity.filtered
+MAX_ID_NUM=50000
+SEQKIT_CUT=50
+THREADS=1
+
+##### Parameter reading
+
+while [ "$1" != "" ]; do
+	case $1 in
+		-a | --assemblies )		shift
+								ASSEMBLIES=$1
+								;;
+		-f | --filtered )		shift
+								FILTERED_SET=$1
+								;;
+		-n | --idnum )			shift
+								MAX_ID_NUM=$1
+								;;
+		-s | --seqkitcut )		shift
+								SEQKIT_CUT=$1
+								;;
+		-t | --threads )		shift
+								THREADS=$1
+								;;
+		-h | --help )			usage
+								exit
+								;;
+		* )						usage
+								exit 1
+	esac
+	shift
+done
+
+##### Checking if all programs are installed
+hash seqkit 2>/dev/null || { echo >&2 "Seqkit seems to not been installed or added to the Path. Aborting."; exit 1; }
+
+##### Parameter validation
+
+assembly_list=$(ls *$ASSEMBLIES | sed "s/$ASSEMBLIES//")
+if [ -z "$assembly_list" ]
+then
+	echo "No assemblies detected with the following string: *"$ASSEMBLIES
+	exit 1
+else
+	for assembly in $assembly_list
+	do
+		is_fasta=$(seqkit stats $assembly$ASSEMBLIES) # seqkit error message already clarifies if its a format or a file existing issue
+		if [ -z "$is_fasta" ]
+		then
+			echo $assembly" is not a fasta file"
+			exit 1
+		else
+			not_zipped=$(ls $assembly$ASSEMBLIES | grep -c ".gz"$)
+			if [ ! $not_zipped -eq 0 ]
+			then
+				echo "Please unzip all files"
+				exit 1
+			fi
+		fi
+		is_trinity=$(grep -E -c ">TRINITY_DN" $assembly$ASSEMBLIES)
+		if [ $is_trinity -eq 0 ]
+		then
+			echo $assembly$ASSEMBLIES "Is not a Trinity assembly. Please verify."
+			exit 1
+		fi
+	done
+fi
+
+# FILTERED_SET supplied
+if [ -z "$FILTERED_SET" ]
+then
+	echo "No extension detected for the filtered files. Check your given command"
+	exit 1
+else
+	for assembly in $assembly_list
+	do
+		if [  -f $assembly$FILTERED_SET ]
+		then
+			echo $assembly$FILTERED_SET "Already exists. Aborting"
+			exit 1
+		fi
+	done
+fi
+
+# MAX_ID_NUM is a valid number
+if [[ ! "$MAX_ID_NUM" =~ ^[0-9]+$ ]]
+then
+	echo "-n value must be an integir: " $MAX_ID_NUM
+	exit 1
+else
+	if [ $MAX_ID_NUM -eq 0 ]
+	then
+		echo "Invalid -n value: "$MAX_ID_NUM
+		exit 1
+	fi
+fi
+
+# SEQKIT_CUT is a valid number
+if [[ ! "$SEQKIT_CUT" =~ ^[0-9]+$ ]]
+then
+	echo "-s value must be an integir: " $SEQKIT_CUT
+	exit 1
+else
+	if [ $SEQKIT_CUT -eq 0 ]
+	then
+		echo "Invalid -s value: "$SEQKIT_CUT
+		exit 1
+	fi
+fi
+
+# THREADS is a valid number
+if [[ ! "$THREADS" =~ ^[0-9]+$ ]]
+then
+	echo "-t value must be an integir: " $THREADS
+	exit 1
+else
+	if [ $THREADS -eq 0 ]
+	then
+		echo "Invalid -t value: "$THREADS
+		exit 1
+	fi
+fi
+
+##### Program execution
+for assembly in $assembly_list
+do
+	echo "Filtering"
+	mkdir "XXX_TEMPORAL_"$assembly"_files"
+	awk '/^>/ {if (seqlen){print seqlen}; print ;seqlen=0;next; } { seqlen = seqlen +length($0)}END{print seqlen}' $assembly$ASSEMBLIES | sed 's/ len=.*//' | awk 'BEGIN{RS=">"}{print $1"\t"$2;}' | sed 's/_i/_iXXX/' >> "XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' # This retrieves the length information of the header and makes a table with it. The XXX simplifies the next steps
+
+	filter=$(cut -f 1 "XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' | sed 's/XXX.*//' | sort -u)
+	for x in $filter
+	do
+		grep $x "XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' | sort -n -k 2 | tail -n 1 | sed 's/XXX//' | cut -f1 >> $assembly'_LongerIsoforms.id'
+	done
+
+	# Retrieving Longer issoforms
+	echo 'Extracting sequences'
+	split -l $MAX_ID_NUM $assembly'_LongerIsoforms.id' "XXX_TEMPORAL_"$assembly"_files/"_Splited-$assembly
+	splited_ids=$(ls "XXX_TEMPORAL_"$assembly"_files/"_Splited-$assembly*)
+	for slid in $splited_ids
+	do
+		seqkit grep -j $THREADS -f $slid $assembly$ASSEMBLIES >> $assembly"-LongerIsoforms.fa"
+		rm $slid
+	done
+
+	# Extracting sequences
+	seqkit subseq -r "1:"$SEQKIT_CUT $assembly"-LongerIsoforms.fa" | sed 's/>/>F_/' >> $assembly$FILTERED_SET
+	seqkit subseq -r "-"$SEQKIT_CUT":-1" $assembly"-LongerIsoforms.fa" | sed 's/>/>R_/' >> $assembly$FILTERED_SET
+
+	# Removing temp files
+	rm $assembly"-LongerIsoforms.fa.seqkit.fai"
+	rm -r "XXX_TEMPORAL_"$assembly"_files"
+done
+
+echo "Done!!"
+exit
