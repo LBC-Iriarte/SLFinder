@@ -39,7 +39,7 @@ Weblogos: http://weblogo.berkeley.edu/
 
 
 ## Instalation
-SLFinder's scripts does not require compiling, only be granded execution permisions with the following command:
+SLFinder's scripts does not require compiling, only to be granded execution permisions with the following command:
 
 chmod +x SLFinder-step*
 
