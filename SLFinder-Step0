@@ -7,7 +7,7 @@ usage() # Help message
 
 	Important notes:
 	- If your assemblies weren't generated with Trinity you will need to filter your sequences by other means (see the manual).
-	- The script will generate temporal folders named 'XXX_TEMPORAL_[AssemblyID]_files' and remove them afterwards. Make sure there aren't any named this why before running SLFinder-Step0
+	- The script will generate temporal folders named 'XXX_TEMPORAL_[AssemblyID]_files' and remove them afterwards. Make sure there aren't any folders named this way before running SLFinder-Step0
 
 	Software required to have installed and accessible on the path:
 
