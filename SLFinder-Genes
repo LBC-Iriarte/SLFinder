@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-date
-# PATH=$PATH:/home/javier/programas/seq-kit
 
 ##### Default Parameters
 GENOME_REF=
@@ -294,19 +292,11 @@ then
   for read in $data_reads
   do
     echo $read$READ1
-<<<<<<< Updated upstream
-    seqkit fx2tab -n -l -i $read$READ1 | sed "s/\t\t\t/\t/g"  | awk -F "\t" '{print $0"\t"NR}' | sort -k 1 | sed "s/\/1\t/\t/" >> $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_1.tab"
-    seqkit locate -j $THREADS -f $SLFILE $read$READ1 | sed "1d" >> $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_1.tab"
-
-    echo $read$READ2
-    seqkit fx2tab -n -l -i $read$READ2 | sed "s/\t\t\t/\t/g"  | awk -F "\t" '{print $0"\t"NR}' | sort -k 1 | sed "s/\/2\t/\t/" >> $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_2.tab"
-=======
     seqkit fx2tab -n -l -i $read$READ1 | sed "s/\t\t\t/\t/g" | sed "s/\/1\t/\t/" >> $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_1.tab"
     seqkit locate -j $THREADS -f $SLFILE $read$READ1 | sed "1d" >> $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_1.tab"
 
     echo $read$READ2
     seqkit fx2tab -n -l -i $read$READ2 | sed "s/\t\t\t/\t/g" | sed "s/\/2\t/\t/" >> $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_2.tab"
->>>>>>> Stashed changes
     seqkit locate -j $THREADS -f $SLFILE $read$READ2 | sed "1d" >> $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_2.tab"
 
     # Remove reads with SL hits on both ends
@@ -338,33 +328,17 @@ then
     grep -w -F -f $OUT_DIR/temp_files/read_SL_tab/$read"_simplifing_index.temp" $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_2.tab" >> $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_work_2.tab"
 
     # Adding read length to the location files
-<<<<<<< Updated upstream
-    sl_read_1=$(awk -F "\t" '{print $1}' $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_1.tab" | sed "s/\/1$//")
-    sl_read_2=$(awk -F "\t" '{print $1}' $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_2.tab" | sed "s/\/2$//")
-    for interest_read in $sl_read_1
-    do
-      interest_read_len=$(grep -F -w $interest_read $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_work_1.tab" | awk -F "\t" '{print $2}')
-      sed -i "/^$interest_read\/1/ s/$/\t$interest_read_len/" $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_1.tab"
-    done
-    for interest_read in $sl_read_2
-    do
-      interest_read_len=$(grep -F -w $interest_read $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_work_2.tab" | awk -F "\t" '{print $2}')
-      sed -i "/^$interest_read\/2/ s/$/\t$interest_read_len/" $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_2.tab"
-=======
     sl_read_1=$(awk -F "\t" '{print $1}' $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_1.tab" | sed "s/\/1$/\\\\\/1/")
     sl_read_2=$(awk -F "\t" '{print $1}' $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_2.tab" | sed "s/\/2$/\\\\\/2/")
     for interest_read in $sl_read_1
     do
       interest_read_len=$(grep -F -w $interest_read $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_work_1.tab" | awk -F "\t" '{print $2}')
-      echo $interest_read" - "$interest_read_len
       sed -i "/^$interest_read/ s/$/\t$interest_read_len/" $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_1.tab"
     done
     for interest_read in $sl_read_2
     do
-      echo $interest_read" - "$interest_read_len
       interest_read_len=$(grep -F -w $interest_read $OUT_DIR/temp_files/read_SL_tab/$read"_reads_len_work_2.tab" | awk -F "\t" '{print $2}')
       sed -i "/^$interest_read/ s/$/\t$interest_read_len/" $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_2.tab"
->>>>>>> Stashed changes
     done
     echo "Retrieving reads with SL hits"
     for sl in $sl_tags
@@ -559,8 +533,8 @@ then
               if [ "$acepting_end" == "left" ]
               then
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/Results/Bowtie2_Alignments/$read"_"$sl"_sorted.sam" | awk '{print $3}')
-                aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/Results/Bowtie2_Alignments/$read"_"$sl"_sorted.sam" | awk '{print $4}')
-                aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1-2":"$1-1}')
+                aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/Results/Bowtie2_Alignments/$read"_"$sl"_sorted.sam" | awk '{print $4-1}')
+                aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1-1":"$1}')
                 aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
 
@@ -638,9 +612,4 @@ then
     done
   fi
 fi
-date
-<<<<<<< Updated upstream
 exit
-=======
-exit
->>>>>>> Stashed changes
