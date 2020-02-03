@@ -37,7 +37,7 @@ Trimal: http://trimal.cgenomics.org/trimal
 
 Weblogos: http://weblogo.berkeley.edu/
 
-## Importan Note!!!
+## Important Note!!!
 The current version of SLFinder was designed to work with seqkit older than v0.10.2, trimal 1.2rev59 and Trinity older than v2.9.1 
 
 Using a newer version of seqkit only generates inocuos warning messages regarding the use of a new functionality and there are instructions about how to use trimal 1.4rev59 in the manual so it behaves as intended in this pipelines. However Trinity v2.9.1 removed the option to set the kmer size on which Step1 relies on.
