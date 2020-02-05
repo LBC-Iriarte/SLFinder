@@ -50,4 +50,4 @@ SLFinder's scripts does not require compiling, only to be granded execution perm
 chmod +x SLFinder-step*
 
 ## Citation:
-<<<Under Peer Review>>>
+[Under Peer Review]
