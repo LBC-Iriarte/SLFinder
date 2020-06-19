@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
+
+# Cambios relevantes: La salida de este script ahora queda guardada en una carpeta específica
+
+
 usage() # Help message
 {
 	echo "usage: SL:detector-step-0 [OTHER PARAMETERS] [-a ASSEMBLIES] [-f FILTERED]] | [-h]
-
 	This script generates filters a Trinity assembly to be used by SLFinder. It takes the longest issoform of each 'gene' defined by Trinityand retrieves the XX first/last bases.
-
 	Important notes:
 	- If your assemblies weren't generated with Trinity you will need to filter your sequences by other means (see the manual).
 	- The script will generate temporal folders named 'XXX_TEMPORAL_[AssemblyID]_files' and remove them afterwards. Make sure there aren't any folders named this way before running SLFinder-Step0
-
 	Software required to have installed and accessible on the path:
-
 		1) Seqkit
-
 	Options:
 		-a, --assemblies	String identifying the assemblies (Default: _Trinity.fasta)
 		-f, --filtered	Output files extension (Default: _Trinity.filtered)
+		-F, --fi_folder	Folder containing the filtered assemblies
 		-n, --idnum	Max Number of IDs to search at a given time with seqkit grep (Default 50000)
 		-s, --seqcut	Basepairs to keep from both ends (Default: 50)
 		-t, --threads	Number of processors to use when possible (seqkit grep) (Default=1)
@@ -28,6 +28,7 @@ usage() # Help message
 
 ASSEMBLIES=_Trinity.fasta
 FILTERED_SET=_Trinity.filtered
+FILTERED_FOLDER=Filtered_Assemblies
 MAX_ID_NUM=50000
 SEQKIT_CUT=50
 THREADS=1
@@ -39,8 +40,11 @@ while [ "$1" != "" ]; do
 		-a | --assemblies )		shift
 								ASSEMBLIES=$1
 								;;
-		-f | --filtered )		shift
+		-f | --fi_folder )		shift
 								FILTERED_SET=$1
+								;;
+		-F | --filtered )		shift
+								FILTERED_FOLDER=$1
 								;;
 		-n | --idnum )			shift
 								MAX_ID_NUM=$1
@@ -95,20 +99,17 @@ else
 	done
 fi
 
-# FILTERED_SET supplied
+# FILTERED_SET and FILTERED_FOLDER supplied and valid
 if [ -z "$FILTERED_SET" ]
 then
-	echo "No extension detected for the filtered files. Check your given command"
+	echo "No extension detected for the filtered files. Check the given command -f"
 	exit 1
 else
-	for assembly in $assembly_list
-	do
-		if [  -f $assembly$FILTERED_SET ]
-		then
-			echo $assembly$FILTERED_SET "Already exists. Aborting"
-			exit 1
-		fi
-	done
+	if [ -d "$FILTERED_FOLDER" ]
+	then
+		echo "Result Folder already exist. Check the given command -F"
+		exit 1
+	fi
 fi
 
 # MAX_ID_NUM is a valid number
@@ -151,35 +152,38 @@ else
 fi
 
 ##### Program execution
+mkdir $FILTERED_FOLDER
+
 for assembly in $assembly_list
 do
 	echo "Filtering"
-	mkdir "XXX_TEMPORAL_"$assembly"_files"
-	awk '/^>/ {if (seqlen){print seqlen}; print ;seqlen=0;next; } { seqlen = seqlen +length($0)}END{print seqlen}' $assembly$ASSEMBLIES | sed 's/ len=.*//' | awk 'BEGIN{RS=">"}{print $1"\t"$2;}' | sed 's/_i/_iXXX/' >> "XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' # This retrieves the length information of the header and makes a table with it. The XXX simplifies the next steps
+	mkdir $FILTERED_FOLDER/"XXX_TEMPORAL_"$assembly"_files"
 
-	filter=$(cut -f 1 "XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' | sed 's/XXX.*//' | sort -u)
+	awk '/^>/ {if (seqlen){print seqlen}; print ;seqlen=0;next; } { seqlen = seqlen +length($0)}END{print seqlen}' $assembly$ASSEMBLIES | sed 's/ len=.*//' | awk 'BEGIN{RS=">"}{print $1"\t"$2;}' | sed 's/_i/_iXXX/' >> $FILTERED_FOLDER/"XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' # This retrieves the length information of the header and makes a table with it. The XXX simplifies the next steps
+
+	filter=$(cut -f 1 $FILTERED_FOLDER/"XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' | sed 's/XXX.*//' | sort -u)
 	for x in $filter
 	do
-		grep $x "XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' | sort -n -k 2 | tail -n 1 | sed 's/XXX//' | cut -f1 >> $assembly'_LongerIsoforms.id'
+		grep $x $FILTERED_FOLDER/"XXX_TEMPORAL_"$assembly"_files/"$assembly'_fasta-len' | sort -n -k 2 | tail -n 1 | sed 's/XXX//' | cut -f1 >> $FILTERED_FOLDER/$assembly'_LongerIsoforms.id'
 	done
 
 	# Retrieving Longer issoforms
 	echo 'Extracting sequences'
-	split -l $MAX_ID_NUM $assembly'_LongerIsoforms.id' "XXX_TEMPORAL_"$assembly"_files/"_Splited-$assembly
-	splited_ids=$(ls "XXX_TEMPORAL_"$assembly"_files/"_Splited-$assembly*)
+	split -l $MAX_ID_NUM $FILTERED_FOLDER/$assembly'_LongerIsoforms.id' $FILTERED_FOLDER/"XXX_TEMPORAL_"$assembly"_files/"_Splited-$assembly
+	splited_ids=$(ls $FILTERED_FOLDER/"XXX_TEMPORAL_"$assembly"_files/"_Splited-$assembly*)
 	for slid in $splited_ids
 	do
-		seqkit grep -j $THREADS -f $slid $assembly$ASSEMBLIES >> $assembly"-LongerIsoforms.fa"
+		seqkit grep -j $THREADS -f $slid $assembly$ASSEMBLIES >> $FILTERED_FOLDER/$assembly"-LongerIsoforms.fa"
 		rm $slid
 	done
 
 	# Extracting sequences
-	seqkit subseq -r "1:"$SEQKIT_CUT $assembly"-LongerIsoforms.fa" | sed 's/>/>F_/' >> $assembly$FILTERED_SET
-	seqkit subseq -r "-"$SEQKIT_CUT":-1" $assembly"-LongerIsoforms.fa" | sed 's/>/>R_/' >> $assembly$FILTERED_SET
+	seqkit subseq -r "1:"$SEQKIT_CUT $FILTERED_FOLDER/$assembly"-LongerIsoforms.fa" | sed 's/>/>F_/' >> $FILTERED_FOLDER/$assembly$FILTERED_SET
+	seqkit subseq -r "-"$SEQKIT_CUT":-1" $FILTERED_FOLDER/$assembly"-LongerIsoforms.fa" | sed 's/>/>R_/' >> $FILTERED_FOLDER/$assembly$FILTERED_SET
 
 	# Removing temp files
-	rm $assembly"-LongerIsoforms.fa.seqkit.fai"
-	rm -r "XXX_TEMPORAL_"$assembly"_files"
+	rm $FILTERED_FOLDER/$assembly"-LongerIsoforms.fa.seqkit.fai"
+	rm -r $FILTERED_FOLDER/"XXX_TEMPORAL_"$assembly"_files"
 done
 
 echo "Done!!"
