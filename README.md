@@ -15,7 +15,6 @@ Blast the pSL sequences against a reference transcriptome looking to verify thei
 
 Detailed instructions of how to run to control the SL search can be find on the SLFinder_manual.pdf
 
-
 ## Necesary programs:
 The pipeline requires a BASH enviroment to run (i.e. UBUNTU) and the following programs installed and in the PATH:
 
@@ -29,20 +28,13 @@ MAFFT: https://mafft.cbrc.jp/alignment/software/source.html
 
 Salmon: https://github.com/COMBINE-lab/salmon
 
-Seqkit: https://github.com/shenwei356/seqkit
+Seqkit (v0.10.2 or higher): https://github.com/shenwei356/seqkit
 
-Trinity: https://github.com/trinityrnaseq/trinityrnaseq/wiki
+Trinity (v2.10.0 or higher): https://github.com/trinityrnaseq/trinityrnaseq/wiki
 
-Trimal: http://trimal.cgenomics.org/trimal
+Trimal (1.4rev59 but see manual): http://trimal.cgenomics.org/trimal
 
 Weblogos: http://weblogo.berkeley.edu/
-
-## Important Note!!!
-The current version of SLFinder was designed to work with seqkit older than v0.10.2, trimal 1.2rev59 and Trinity older than v2.9.1 
-
-Using a newer version of seqkit only generates inocuos warning messages regarding the use of a new functionality and there are instructions about how to use trimal 1.4rev59 in the manual so it behaves as intended in this pipelines. However Trinity v2.9.1 removed the option to set the kmer size on which Step1 relies on.
-Until this can be properly addresed in a future patch you will need to downgrade Trinity before using SLFinder
-
 
 ## Instalation
 SLFinder's scripts does not require compiling, only to be granded execution permisions with the following command:
@@ -50,4 +42,4 @@ SLFinder's scripts does not require compiling, only to be granded execution perm
 chmod +x SLFinder-step*
 
 ## Citation:
-[Under Peer Review]
+_Comming soon_
