@@ -4,7 +4,7 @@ CDHIT_R=1
 OUT_DIR=SL-analysis
 THREADS=1
 GAP_TRIMAL=0.9
-SM_TRIMAL=0.001
+SM_TRIMAL=0.5
 MIN_RAW=15
 MIN_TRIMAL=15
 
@@ -16,8 +16,8 @@ This script takes the results sequences from SLFinder-Step1, aligns and trimms t
 Alignments requiring manual curation are reported in the file 'Step2_Problematic-Alignments'.
 
 Important note:
-- Default parameters were tested with trimal v1.2 and the newer v1.4 is less agressive for the same parameters values.
-	If you are using this version set '-ts 0.5' so SLFinder beheaves as intended.
+- Default parameters are set with trimal v1.4 in mind. The older v1.2 is far more agressive for the same parameters values.
+	If you are using the older version set '-ts 0.001' so SLFinder beheaves as intended.
 
 Packages required to have on the path:
 	1) CD-HIT
@@ -29,7 +29,7 @@ Packages required to have on the path:
 Filtering Options:
 	-c, --cdhitR	CD-HIT-EST sequence identity threshold used for the raw Hook matches (Default: 1)
 	-m, --minimun	Minimal Raw Match length to consider (Default: 15, same as '-ba' option on Storage-step1)
-	-ts, --trimalsm	Similarity score used in Trimal to authomaticaly trim the alignments (Default: 0.001)
+	-ts, --trimalsm	Similarity score used in Trimal to authomaticaly trim the alignments (Default: 0.5)
 	-tg, --trimalgap	Gap threshold used in Trimal to authomaticaly trim the alignments (Default: 0.90)
 	-tm, --trimmin	Minimal trimmed sequence length (Default: 15)
 
