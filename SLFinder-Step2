@@ -227,7 +227,7 @@ do
 		echo $seqfile" Only has a single sequence" >> $OUT_DIR/Warnings/Step2_Manual-curation
 		discarded_files_list=$discarded_files_list"_"$seqfile
 	else
-		seqkit seq -m $MIN_RAW $OUT_DIR/Results/Raw_Matches/$seqfile"-sequence" -o $OUT_DIR/temp_files/filtered_matches/$seqfile".seqkit-cut"
+		seqkit seq -m $MIN_RAW $OUT_DIR/Results/Raw_Matches/$seqfile"-sequence" >> $OUT_DIR/temp_files/filtered_matches/$seqfile".seqkit-cut"
 		cd-hit-est -c $CDHIT_R -T $THREADS -i $OUT_DIR/temp_files/filtered_matches/$seqfile".seqkit-cut" -o $OUT_DIR/temp_files/filtered_matches/$seqfile".cd-hit-est"
 		#Aligment, sequence logo and trimming
 		mafft --globalpair --thread $THREADS --quiet --maxiterate 1000 $OUT_DIR/temp_files/filtered_matches/$seqfile".cd-hit-est" > $OUT_DIR/Results/alignments/$seqfile".aln"
@@ -272,7 +272,7 @@ do
 		else
 			# If everything is right, generate a sequence logos for the trimal sequences and remove gaps
 			weblogo -a ACTG -D fasta -c classic -F pdf -f $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-raw" -o $OUT_DIR/Results/weblogos/trimed_aligment/$seqfile2"_Trimal-seqlogo.pdf"
-			seqkit seq -g $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-raw" -o $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-nogap"
+			seqkit seq -g $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-raw" >> $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-nogap"
 			abemus_data=TRUE
 			cd-hit-est -c 1 -T $THREADS -i $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-nogap" -o $OUT_DIR/Results/Hook_variants/Hook_Individual/$seqfile2"-SL.fa"
 		fi
