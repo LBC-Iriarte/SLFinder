@@ -629,7 +629,7 @@ File\tN Sequences" >> $OUT_DIR/Step1_Summary
 			echo $table_line | tr "_" "\t" >> $OUT_DIR/Step1_Summary
 		done
 	fi
-	if [ "$multi_hit" == "TRUE" ]
+	if [ "$missing_hook" == "TRUE" ]
 	then
 		echo -e "
 ###################################################################################
