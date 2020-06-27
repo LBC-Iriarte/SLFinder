@@ -28,7 +28,7 @@ MAFFT: https://mafft.cbrc.jp/alignment/software/source.html
 
 Salmon: https://github.com/COMBINE-lab/salmon
 
-Seqkit (v0.10.2 or higher): https://github.com/shenwei356/seqkit
+Seqkit (v0.12): https://github.com/shenwei356/seqkit
 
 Trinity (v2.10.0 or higher): https://github.com/trinityrnaseq/trinityrnaseq/wiki
 
