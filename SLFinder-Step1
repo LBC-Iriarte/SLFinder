@@ -483,6 +483,7 @@ done
 
 # Extracting sequences.
 multi_hit=FALSE
+missing_hook=FALSE
 for hook in $best_hook
 do
 	echo "
@@ -527,8 +528,20 @@ Extracting "$hook" Matches"
 		fi
 
 		# Reporting Transcripts with multiple matches
+		if [ -f $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID" ]
+		then
+			check_multi_hit=$(grep -c . $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID")
+		else
+			check_multi_hit=0
+			# This... is weird. Checking if there are missing hits for other Hooks
+			missing_hook_count=$(grep -c $hook $OUT_DIR/temp_files/Blast_search/$assembly"_Hook_Blast")
+			if [ $missing_hook_count -eq 0 ]
+			then
+				missing_hook=TRUE
+				echo $assembly": "$hook >> $OUT_DIR/Warnings/Missing_Hook_hits
+			fi
+		fi
 
-		check_multi_hit=$(grep -c . $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID")
 		if [ $check_multi_hit -gt 0 ]
 		then
 			cp $OUT_DIR/temp_files/Blast_search/$assembly"-"$hook"_multihit.ID" $OUT_DIR/Results/Anomalous_Matches/$assembly"-"$hook"_multihit.ID"
@@ -615,6 +628,13 @@ File\tN Sequences" >> $OUT_DIR/Step1_Summary
 			done
 			echo $table_line | tr "_" "\t" >> $OUT_DIR/Step1_Summary
 		done
+	fi
+	if [ "$multi_hit" == "TRUE" ]
+	then
+		echo -e "
+###################################################################################
+### Missing Hook Hits on Assemblies" >> $OUT_DIR/Step1_Summary
+		cat $OUT_DIR/Warnings/Missing_Hook_hits >> $OUT_DIR/Step1_Summary
 	fi
 	echo "
 Step 1 is done!!! Proceed to step 2 to filter the results."
