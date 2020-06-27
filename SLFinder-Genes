@@ -99,12 +99,12 @@ while [ "$1" != "" ]; do
 done
 
 ##### Checking if all programs are installed
-hash bowtie2 2>/dev/null || { echo >&2 "bowtie2 seems to not been installed or added to the Path. Aborting."; exit 1; }
-hash cd-hit-est 2>/dev/null || { echo >&2 "cd-hit-est seems to not been installed or added to the Path. Aborting."; exit 1; }
-hash htseq-count 2>/dev/null || { echo >&2 "htseq-count seems to not been installed or added to the Path. Aborting."; exit 1; }
-hash seqkit 2>/dev/null || { echo >&2 "seqkit seems to not been installed or added to the Path. Aborting."; exit 1; }
-hash samtools 2>/dev/null || { echo >&2 "samtools seems to not been installed or added to the Path. Aborting."; exit 1; }
-hash cutadapt 2>/dev/null || { echo >&2 "cutadapt seems to not been installed or added to the Path. Aborting."; exit 1; }
+hash bowtie2 2>/dev/null || { echo >&2 "bowtie2 seems to not be installed or added to the Path. Aborting."; exit 1; }
+hash cd-hit-est 2>/dev/null || { echo >&2 "cd-hit-est seems to not be installed or added to the Path. Aborting."; exit 1; }
+hash htseq-count 2>/dev/null || { echo >&2 "htseq-count seems to not be installed or added to the Path. Aborting."; exit 1; }
+hash seqkit 2>/dev/null || { echo >&2 "seqkit seems to not be installed or added to the Path. Aborting."; exit 1; }
+hash samtools 2>/dev/null || { echo >&2 "samtools seems to not be installed or added to the Path. Aborting."; exit 1; }
+hash cutadapt 2>/dev/null || { echo >&2 "cutadapt seems to not be installed or added to the Path. Aborting."; exit 1; }
 
 ##### Parameter validation
 
