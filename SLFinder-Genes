@@ -17,7 +17,8 @@ THREADS=1
 ##### Usage
 usage() # Help message
 {
-  echo "usage: |||| PLACE HOLDER ||||
+  echo "Usage Paired end: ./SLFinder-Genes [OTHER PARAMETERS] [-s SL_File ] [-g GENOME.fasta ] [-a ASSEMBLIES] [-gt GENOME.gtf (optional)] [-a ASSEMBLIES] [-r1 READ1.fastq] [-r2 READ2.fastq]
+Usage Paired end: ./SLFinder-Genes [OTHER PARAMETERS] [-s SL_File ] [-g GENOME.fasta ] [-a ASSEMBLIES] [-gt GENOME.gtf (optional)] [-a ASSEMBLIES] [-rs READ.fastq] [-p FALSE]
 This script takes known SL sequences provided in a Fasta file and retrieves the genes IDs that posses those sequences.
 
   Packages required to have on the path:
@@ -300,6 +301,7 @@ then
     seqkit locate -j $THREADS -f $SLFILE $read$READ2 | sed "1d" >> $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_2.tab"
 
     # Remove reads with SL hits on both ends
+    #### Mi sospecha para los problemas
     cut -f 1 $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_1.tab" | sed "s/\//\t/" | awk '{print $1}' | sed "s/\/1$//" >> $OUT_DIR/temp_files/read_SL_tab/$read"_both_ends_Test"
     cut -f 1 $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_2.tab" | sed "s/\//\t/" | awk '{print $1}' | sed "s/\/2$//" >> $OUT_DIR/temp_files/read_SL_tab/$read"_both_ends_Test"
     sort $OUT_DIR/temp_files/read_SL_tab/$read"_both_ends_Test" | uniq -d >> $OUT_DIR/temp_files/read_SL_tab/$read"_both_ends_Test_2"
@@ -343,7 +345,7 @@ then
     echo "Retrieving reads with SL hits"
     for sl in $sl_tags
     do
-      echo "Processing: "$reads" - "$sl
+      echo "Processing: "$read" - "$sl
       sl_len=$(grep $sl $SLFILE | awk '{print $2}')
       tolerance=$(($sl_len + $MISSING))
 
@@ -355,8 +357,9 @@ then
       sed "s/\/1$/\/2/" $OUT_DIR/temp_files/read_SL_tab/$read"_"$sl"_SL_selected.tab" >> $OUT_DIR/temp_files/read_SL_tab/$read"_"$sl"_SL_selected_2.tab"
 
       sl_len=$(grep -F -w $sl $OUT_DIR/temp_files/$SLFILE"_len.temp" | awk -F " " '{print $2}')
-      forward_adapter=$(seqkit grep -p $sl $SLFILE | seqkit seq -s -u)
-      reverse_adapter=$(seqkit grep -p $sl $SLFILE | seqkit seq -s -u -r -p -v)
+      forward_adapter=$(seqkit grep -p $sl $SLFILE | seqkit seq -t DNA -v -s -u)
+      reverse_adapter=$(seqkit grep -p $sl $SLFILE | seqkit seq -t DNA -v -s -u -r -p -v)
+
       cutadapt -j $THREADS --quiet --pair-filter both -g $forward_adapter -a $reverse_adapter -G $forward_adapter -A $reverse_adapter -e 0 --no-indels -O $sl_len --discard-untrimmed -o $OUT_DIR/temp_files/read_SL/$read"_"$sl"_temp_1.fastq" -p $OUT_DIR/temp_files/read_SL/$read"_"$sl"_temp_2.fastq" $read$READ1 $read$READ2
 
       seqkit grep -j $THREADS -f $OUT_DIR/temp_files/read_SL_tab/$read"_"$sl"_SL_selected_1.tab" $OUT_DIR/temp_files/read_SL/$read"_"$sl"_temp_1.fastq" >> $OUT_DIR/Results/read_SL/$read"_"$sl"_reads_filtered_1.fq"
@@ -410,8 +413,8 @@ then
       # Selecting reads
       grep -F -w $sl $OUT_DIR/temp_files/read_SL_tab/$read"_SL_location_1.tab" | awk -F "\t" -v min=$MINREAD -v tol=$tolerance '{if ($4=="+" && $6<=tol && $8-$6>=min) print $1; else if ($4=="-" && $5>=min && $8-$5+1<=tol) print $1}' >> $OUT_DIR/temp_files/read_SL_tab/$read"_"$sl"_SL_selected.tab"
       sl_len=$(grep -F -w $sl $OUT_DIR/temp_files/$SLFILE"_len.temp" | awk -F " " '{print $2}')
-      forward_adapter=$(seqkit grep -p $sl $SLFILE | seqkit seq -s -u)
-      reverse_adapter=$(seqkit grep -p $sl $SLFILE | seqkit seq -s -u -r -p -v)
+      forward_adapter=$(seqkit grep -p $sl $SLFILE | seqkit seq -t DNA -v -s -u)
+      reverse_adapter=$(seqkit grep -p $sl $SLFILE | seqkit seq -t DNA -v -s -u -r -p -v)
       cutadapt -j $THREADS --quiet -g $forward_adapter -a $reverse_adapter -e 0 --no-indels -O $sl_len --discard-untrimmed -o $OUT_DIR/temp_files/read_SL/$read"_"$sl"_temp_1.fastq" $read$READS
       seqkit grep -j $THREADS -f $OUT_DIR/temp_files/read_SL_tab/$read"_"$sl"_SL_selected.tab" $OUT_DIR/temp_files/read_SL/$read"_"$sl"_temp_1.fastq" >> $OUT_DIR/Results/read_SL/$read"_"$sl"_reads_filtered_1.fq"
     done
@@ -468,16 +471,16 @@ then
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_readpair_"$read_pair".sam" | awk '{print $3}')
                 aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_readpair_"$read_pair".sam" | awk '{print $4}')
                 aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1-2":"$1-1}')
-                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u)
+                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -t DNA -v -s -u)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
-
+                aceptor_site_location=$(($aceptor_site_location - 1))
                 # Gen ID, Position, Valid Aceptor site, Aceptor Site location, Aceptor Site Sequence, Read ID, read pair
                 echo -e $aceptor"\t"$valid_aceptor_site"\t"$aceptor_site_location"\t"$aceptor_site_sequence"\t"$sl_read"\t"$read_pair | sed "s/gene://" >> $OUT_DIR/Results/Potential_aceptor_sites/$read"_"$sl"_aceptor_sites.tab"
               else
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_readpair_"$read_pair".sam" | awk '{print $3}')
                 aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_readpair_"$read_pair".sam" | awk -v len=$read_len '{print $4+len}')
                 aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1":"$1+1}')
-                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u -r -p -v)
+                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -t DNA -v -s -u -r -p -v)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
                 # Gen ID, Position, Valid Aceptor site, Aceptor Site location, Aceptor Site Sequence, Read ID, read pair
                 echo -e $aceptor"\t"$valid_aceptor_site"\t"$aceptor_site_location"\t"$aceptor_site_sequence"\t"$sl_read"\t"$read_pair | sed "s/gene://" >> $OUT_DIR/Results/Potential_aceptor_sites/$read"_"$sl"_aceptor_sites.tab"
@@ -489,15 +492,16 @@ then
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_readpair_reverse_"$read_pair".sam" | awk '{print $3}')
                 aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_readpair_reverse_"$read_pair".sam" | awk -v len=$read_len '{print $4+len}')
                 aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1":"$1+1}')
-                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u -r -p -v)
+                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -t DNA -v -s -u -r -p -v)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
                 echo -e $aceptor"\t"$valid_aceptor_site"\t"$aceptor_site_location"\t"$aceptor_site_sequence"\t"$sl_read"\t"$read_pair | sed "s/gene://" >> $OUT_DIR/Results/Potential_aceptor_sites/$read"_"$sl"_aceptor_sites.tab"
               else
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_readpair_reverse_"$read_pair".sam" | awk '{print $3}')
                 aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_readpair_reverse_"$read_pair".sam" | awk '{print $4}')
                 aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1-2":"$1-1}')
-                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u)
+                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -t DNA -v -s -u)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
+                aceptor_site_location=$(($aceptor_site_location - 1))
                 echo -e $aceptor"\t"$valid_aceptor_site"\t"$aceptor_site_location"\t"$aceptor_site_sequence"\t"$sl_read"\t"$read_pair | sed "s/gene://" >> $OUT_DIR/Results/Potential_aceptor_sites/$read"_"$sl"_aceptor_sites.tab"
               fi
             fi
@@ -535,16 +539,16 @@ then
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/Results/Bowtie2_Alignments/$read"_"$sl"_sorted.sam" | awk '{print $3}')
                 aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/Results/Bowtie2_Alignments/$read"_"$sl"_sorted.sam" | awk '{print $4-1}')
                 aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1-1":"$1}')
-                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u)
+                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -t DNA -v -s -u)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
-
+                aceptor_site_location=$(($aceptor_site_location - 1))
                 # Gen ID, Position, Valid Aceptor site, Aceptor Site location, Aceptor Site Sequence, Read ID, read pair
                 echo -e $aceptor"\t"$valid_aceptor_site"\t"$aceptor_site_location"\t"$aceptor_site_sequence"\t"$sl_read"\t"$read_pair | sed "s/gene://" >> $OUT_DIR/Results/Potential_aceptor_sites/$read"_"$sl"_aceptor_sites.tab"
               else
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/Results/Bowtie2_Alignments/$read"_"$sl"_sorted.sam" | awk '{print $3}')
                 aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/Results/Bowtie2_Alignments/$read"_"$sl"_sorted.sam" | awk -v len=$read_len '{print $4+len}')
                 aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1":"$1+1}')
-                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u -r -p -v)
+                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -t DNA -v -s -u -r -p -v)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
                 # Gen ID, Position, Valid Aceptor site, Aceptor Site location, Aceptor Site Sequence, Read ID, read pair
                 echo -e $aceptor"\t"$valid_aceptor_site"\t"$aceptor_site_location"\t"$aceptor_site_sequence"\t"$sl_read"\t"$read_pair | sed "s/gene://" >> $OUT_DIR/Results/Potential_aceptor_sites/$read"_"$sl"_aceptor_sites.tab"
@@ -556,15 +560,18 @@ then
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_reverse_1.sam" | awk '{print $3}')
                 aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_reverse_1.sam"| awk -v len=$read_len '{print $4+len}')
                 aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1":"$1+1}')
-                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u -r -p -v)
+                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -t DNA -v -s -u -r -p -v)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
+                # Gen ID, Position, Valid Aceptor site, Aceptor Site location, Aceptor Site Sequence, Read ID, read pair
                 echo -e $aceptor"\t"$valid_aceptor_site"\t"$aceptor_site_location"\t"$aceptor_site_sequence"\t"$sl_read"\t"$read_pair | sed "s/gene://" >> $OUT_DIR/Results/Potential_aceptor_sites/$read"_"$sl"_aceptor_sites.tab"
               else
                 aceptor_site_chromosome=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_reverse_1.sam" | awk '{print $3}')
                 aceptor_site_location=$(grep -F -w $sl_read $OUT_DIR/temp_files/Htseq_SAM/$read"_"$sl"_reverse_1.sam" | awk '{print $4}')
                 aceptor_site_extract=$(echo $aceptor_site_location | awk '{print $1-2":"$1-1}')
-                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -s -u)
+                aceptor_site_sequence=$(seqkit subseq -j $THREADS -r $aceptor_site_extract --chr $aceptor_site_chromosome --gtf $GTF_REF $GENOME_REF | seqkit seq -t DNA -v -s -u)
                 valid_aceptor_site=$(echo $aceptor_site_sequence | awk '{if ($1=="AG") print "Y"; else print "N" }')
+                aceptor_site_location=$(($aceptor_site_location - 1))
+                # Gen ID, Position, Valid Aceptor site, Aceptor Site location, Aceptor Site Sequence, Read ID, read pair
                 echo -e $aceptor"\t"$valid_aceptor_site"\t"$aceptor_site_location"\t"$aceptor_site_sequence"\t"$sl_read"\t"$read_pair | sed "s/gene://" >> $OUT_DIR/Results/Potential_aceptor_sites/$read"_"$sl"_aceptor_sites.tab"
               fi
             fi
