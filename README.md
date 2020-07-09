@@ -42,4 +42,4 @@ SLFinder's scripts does not require compiling, only to be granded execution perm
 chmod +x SLFinder-step*
 
 ## Citation:
-_Comming soon_
+Calvelo, J., Juan, H., Musto, H. et al. SLFinder, a pipeline for the novel identification of splice-leader sequences: a good enough solution for a complex problem. BMC Bioinformatics 21, 293 (2020). https://doi.org/10.1186/s12859-020-03610-6
