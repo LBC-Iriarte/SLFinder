@@ -15,12 +15,17 @@ Blast the pSL sequences against a reference transcriptome looking to verify thei
 
 Detailed instructions of how to run to control the SL search can be find on the SLFinder_manual.pdf
 
+### SLFinder-Genes
+This scripts takes the next step and searches SL aceptor sites on a reference genome. Before using it be warned: in its current implementation is not time efficient, it will throw an EOF error for each tag absent in a read file,and since it uses cutadapt the third line of the fastq must be empty (a problem with SRA data, if in doubt use seqkit seq to copy the read files). If the read counts are anomaly low please contact us.
+
 ## Necesary programs:
 The pipeline requires a BASH enviroment to run (i.e. UBUNTU) and the following programs installed and in the PATH:
 
 Ncbi-blast: https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download
 
 Cd-Hit: https://github.com/weizhongli/cdhit
+
+cutadapt: https://cutadapt.readthedocs.io/en/stable/
 
 Jellyfish: https://github.com/gmarcais/Jellyfish
 
