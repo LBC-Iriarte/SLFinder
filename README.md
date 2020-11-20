@@ -41,7 +41,7 @@ Trimal (1.4rev59 but see manual): http://trimal.cgenomics.org/trimal
 
 Weblogos: http://weblogo.berkeley.edu/
 
-## Instalation
+## Installation
 SLFinder's scripts does not require compiling, only to be granded execution permisions with the following command:
 
 chmod +x SLFinder-step*
