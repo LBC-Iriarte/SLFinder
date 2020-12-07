@@ -231,6 +231,17 @@ do
 		cd-hit-est -c $CDHIT_R -T $THREADS -i $OUT_DIR/temp_files/filtered_matches/$seqfile".seqkit-cut" -o $OUT_DIR/temp_files/filtered_matches/$seqfile".cd-hit-est"
 		#Aligment, sequence logo and trimming
 		mafft --globalpair --thread $THREADS --quiet --maxiterate 1000 $OUT_DIR/temp_files/filtered_matches/$seqfile".cd-hit-est" > $OUT_DIR/Results/alignments/$seqfile".aln"
+		check_file=$(grep -c . $OUT_DIR/Results/alignments/$seqfile".aln")
+		
+		if [ $check_file -eq 0 ]
+		then
+			echo ""
+			echo ""
+			echo "MAFFT produced an empty file, likely because an out of memory error. Check it running this command:"
+			echo "mafft --globalpair --thread $THREADS --maxiterate 1000 $OUT_DIR/temp_files/filtered_matches/"$seqfile".cd-hit-est > "$OUT_DIR"/Results/alignments/"$seqfile".aln"
+			exit 1
+		fi
+		
 		weblogo -a ACTG -D fasta -c classic -F pdf -f $OUT_DIR/Results/alignments/$seqfile".aln" -o $OUT_DIR/Results/weblogos/alignments/$seqfile"-seqlogo.pdf"
 		trimal -gt $GAP_TRIMAL -st $SM_TRIMAL -fasta -in $OUT_DIR/Results/alignments/$seqfile".aln" | awk '/^>/ {printf("\n%s\n",$0);next; } { printf("%s",$0);}	END {printf("\n");}' | awk 'NF' | grep -v ">" | awk -v data=$seqfile '{print ">"data"-" NR "\n" $s}' >> $OUT_DIR/temp_files/trimal_raw/$seqfile".trimal-raw"
 
