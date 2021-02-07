@@ -421,8 +421,8 @@ do
 		loci_trim=$(grep -w ^$loci $OUT_DIR/Warnings/Step3_Loci_extension_warnings | cut -f 4 | awk '{print int($1*0.20)}')
 		loci_sequence_F=$(seqkit head -n 1 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa" | seqkit subseq -r "$loci_trim:-$loci_trim" | seqkit seq -s -t dna -v)
 		loci_sequence_R=$(seqkit head -n 1 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa" | seqkit subseq -r "$loci_trim:-$loci_trim" | seqkit seq -p -r -s -t dna -v)
-		Count_seq_Forward=$(grep -i -c $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 2)
-		Count_seq_Reverse=$(grep -i -c $loci_sequence_R $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 2)
+		Count_seq_Forward=$(seqkit locate -m 1 -P -p $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | grep -v patternName | grep -c .)
+		Count_seq_Reverse=$(seqkit locate -m 1 -P -p $loci_sequence_R $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | grep -v patternName | grep -c .)
 
 		if [ $Count_seq_Forward -eq $Count_seq_Reverse  ]
 		then
@@ -430,21 +430,21 @@ do
 			sed -i "/$loci\t/s/na$/Impossible to establish orientation/" $OUT_DIR/Warnings/Step3_Loci_extension_warnings
 		elif [ $Count_seq_Forward -gt $Count_seq_Reverse ]
 		then
-			Orient_seq_Forward=$(grep -i -c $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | sed "s/$lar_hook//" | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 1)
-			if [ "$Orient_seq_Forward" == "-5prima" ]
+			Orient_seq_Forward=$(seqkit locate -m 1 -P -p $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | grep -v patternName | awk -F ":" '{print $1}' | sort | uniq -c | sort -n -r -k 1 | head -n 1 | awk '{print $2}' | sed 's/-forward.*//' | sed 's/-reverse.*//')
+			if [ "$Orient_seq_Forward" == "5prima" ]
 			then
 				seq_orient=Forward
-			elif [ "$Orient_seq_Forward" == "-3prima" ]
+			elif [ "$Orient_seq_Forward" == "3prima" ]
 			then
 				seq_orient=Reverse
 			fi
 		elif [ $Count_seq_Forward -lt $Count_seq_Reverse ]
 		then
-			Orient_seq_Reverse=$(grep -i -c $loci_sequence_R $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | sed "s/$lar_hook//" | sed 's/.*Raw_Matches\///' | sed 's/-forward-sequence:/\t/' | sed 's/-reverse-sequence:/\t/' | sort -k 2 -n -r | head -n 1 | cut -f 1)
-			if [ "$Orient_seq_Reverse" == "-5prima" ]
+			Orient_seq_Reverse=$(seqkit locate -m 1 -P -p $loci_sequence_R $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | grep -v patternName | awk -F ":" '{print $1}' | sort | uniq -c | sort -n -r -k 1 | head -n 1 | awk '{print $2}' | sed 's/-forward.*//' | sed 's/-reverse.*//')
+			if [ "$Orient_seq_Reverse" == "5prima" ]
 			then
 				seq_orient=Reverse
-			elif [ "$Orient_seq_Reverse" == "-3prima" ]
+			elif [ "$Orient_seq_Reverse" == "3prima" ]
 			then
 				seq_orient=Forward
 			fi
