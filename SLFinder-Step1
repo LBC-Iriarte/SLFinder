@@ -634,7 +634,12 @@ File\tN Sequences" >> $OUT_DIR/Step1_Summary
 		echo -e "
 ###################################################################################
 ### Missing Hook Hits on Assemblies" >> $OUT_DIR/Step1_Summary
-		cat $OUT_DIR/Warnings/Missing_Hook_hits >> $OUT_DIR/Step1_Summary
+		if [ -f $OUT_DIR/Warnings/Missing_Hook_hits ]
+		then
+			cat $OUT_DIR/Warnings/Missing_Hook_hits >> $OUT_DIR/Step1_Summary
+		else
+			echo "None!!"
+		fi
 	fi
 	echo "
 Step 1 is done!!! Proceed to step 2 to filter the results."
