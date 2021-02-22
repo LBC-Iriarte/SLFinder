@@ -792,8 +792,8 @@ then
 		reference_sequence_seq=$(seqkit grep -r -p $reference_sequence_ID"$" $OUT_DIR/Results/pSL_Loci_Unclear.fa | seqkit seq -s -t dna -v)
 		print_cluster=$(echo $cluster | sed 's/XXX$//' | sed 's/_/ /')
 		echo -e "
-		"$print_cluster"
-		Representative pSL: "$reference_sequence_ID"\tSequence: "$reference_sequence_seq"
+"$print_cluster"
+Representative pSL: "$reference_sequence_ID"\tSequence: "$reference_sequence_seq"
 Loci\tScaffold\tLocus extended length\tLocus Orientation\tHook Variants\tDonor Site\tBest pSL ID\tStart-Best\tEnd-Best\tAnnotation Hits\tBest Hit ID\tIdentity\tEvalue" >> $OUT_DIR/Step3_Summary
 		for loc in $locis
 		do
