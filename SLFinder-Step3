@@ -117,8 +117,6 @@ else
 	fi
 fi
 
-SL_FILE=$OUT_DIR/Results/Hook_variants/Hook_all_variants.fa
-
 # Reference genome fasta file exists, is a fasta and its not ziped
 reference_genome=$(seqkit stats $GENOME_REF)
 if [ -z "$reference_genome" ]
@@ -418,13 +416,16 @@ do
 		# Checking Donor site
 		loci_alert=$(grep -w $loci $OUT_DIR/Warnings/Step3_Loci_extension_warnings | cut -f 6)
 		lar_hook=$(sort -k 2 -n -r $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | head -n 1 | cut -f 1 | sed 's/-3prima-.*//' | sed 's/-5prima-.*//')
-		loci_trim=$(grep -w ^$loci $OUT_DIR/Warnings/Step3_Loci_extension_warnings | cut -f 4 | awk '{print int($1*0.20)}')
+
+		loci_trim=$(grep -w ^$loci $OUT_DIR/Warnings/Step3_Loci_extension_warnings | cut -f 4 | awk '{print int($1*0.30)}')
+
 		loci_sequence_F=$(seqkit head -n 1 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa" | seqkit subseq -r "$loci_trim:-$loci_trim" | seqkit seq -s -t dna -v)
 		loci_sequence_R=$(seqkit head -n 1 $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"-matches.fa" | seqkit subseq -r "$loci_trim:-$loci_trim" | seqkit seq -p -r -s -t dna -v)
+
 		Count_seq_Forward=$(seqkit locate -m 1 -P -p $loci_sequence_F $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | grep -v patternName | grep -c .)
 		Count_seq_Reverse=$(seqkit locate -m 1 -P -p $loci_sequence_R $OUT_DIR/Results/Raw_Matches/$lar_hook"-"* | grep -v patternName | grep -c .)
 
-		if [ $Count_seq_Forward -eq $Count_seq_Reverse  ]
+		if [ $Count_seq_Forward -eq $Count_seq_Reverse ]
 		then
 			seq_orient=Undeterminated
 			sed -i "/$loci\t/s/na$/Impossible to establish orientation/" $OUT_DIR/Warnings/Step3_Loci_extension_warnings
@@ -702,7 +703,13 @@ unclear_loci_n=$(cut -f 6 $OUT_DIR/Results/Step3_Loci.tab | grep -c "Unclear")
 not_detected_loci_n=$(cut -f 6 $OUT_DIR/Results/Step3_Loci.tab | grep -c "Not detected")
 not_analyzed_loci_n=$(cut -f 6 $OUT_DIR/Results/Step3_Loci.tab | grep -c "Not Analyzed")
 cds_loci_n=$(cut -f 10 $OUT_DIR/Results/Step3_Loci.tab | grep -v "Annotation Hits" | awk '{ if ($0 > 0 ) print}' | grep -c .)
-cdhit_clusters_clear_n=$(grep -c Cluster $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr)
+
+if [ -f $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr ]
+then
+	cdhit_clusters_clear_n=$(grep -c Cluster $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr)
+else
+	cdhit_clusters_clear_n=0
+fi
 
 echo "####################################
 #####   Step3 Summary Report   #####
@@ -737,28 +744,32 @@ echo "
 " >> $OUT_DIR/Step3_Summary
 
 # Loci with clear donor site found
-echo "### Loci with a clear donor site were clustered in "$cdhit_clusters_clear_n" pSL classes." >> $OUT_DIR/Step3_Summary
+if [ -f $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr ]
+then
+	echo "### Loci with a clear donor site were clustered in "$cdhit_clusters_clear_n" pSL classes." >> $OUT_DIR/Step3_Summary
+	sed -i 's/^>/@/' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr
+	sed -i 's/^@.*/&XXX/' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr
+	sed -i '/^@/s/ /_/g' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr
 
-sed -i 's/^>/@/' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr
-sed -i 's/^@.*/&XXX/' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr
-sed -i '/^@/s/ /_/g' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr
-
-cdhit_clusters_clear=$(grep Cluster $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr | sed 's/@//')
-for cluster in $cdhit_clusters_clear
-do
-	locis=$(awk -v key="$cluster" 'BEGIN {RS="@"} match($0, key) {print ">"$0 }' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr | sed 's/\.\.\. .*//' | sed 's/^.*Locus/Locus/' | grep -v ^">" | grep .)
-	reference_sequence_ID=$(awk -v key="$cluster" 'BEGIN {RS="@"} match($0, key) {print ">"$0 }' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr | sed 's/^.*Locus/Locus/' | grep -v ^">" | grep -F "*" | sed 's/\.\.\. .*//' )
-	reference_sequence_seq=$(seqkit grep -r -p $reference_sequence_ID"$" $OUT_DIR/Results/pSL_Loci.fa | seqkit seq -s -t dna -v)
-	print_cluster=$(echo $cluster | sed 's/XXX$//' | sed 's/_/ /')
-	echo -e "
+	cdhit_clusters_clear=$(grep Cluster $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr | sed 's/@//')
+	for cluster in $cdhit_clusters_clear
+	do
+		locis=$(awk -v key="$cluster" 'BEGIN {RS="@"} match($0, key) {print ">"$0 }' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr | sed 's/\.\.\. .*//' | sed 's/^.*Locus/Locus/' | grep -v ^">" | grep .)
+		reference_sequence_ID=$(awk -v key="$cluster" 'BEGIN {RS="@"} match($0, key) {print ">"$0 }' $OUT_DIR/temp_files/Genome_locis/SL.temp.clstr | sed 's/^.*Locus/Locus/' | grep -v ^">" | grep -F "*" | sed 's/\.\.\. .*//' )
+		reference_sequence_seq=$(seqkit grep -r -p $reference_sequence_ID"$" $OUT_DIR/Results/pSL_Loci.fa | seqkit seq -s -t dna -v)
+		print_cluster=$(echo $cluster | sed 's/XXX$//' | sed 's/_/ /')
+		echo -e "
 # "$print_cluster"
 Representative pSL: "$reference_sequence_ID"\tSequence: "$reference_sequence_seq"
 Locus\tScaffold\tLocus extended length\tLocus Orientation\tHook Variants\tDonor Site\tBest pSL ID\tStart-Best\tEnd-Best\tAnnotation Hits\tBest Hit ID\tIdentity\tEvalue" >> $OUT_DIR/Step3_Summary
-	for loc in $locis
-	do
-		grep -w $loc $OUT_DIR/Results/Step3_Loci.tab >> $OUT_DIR/Step3_Summary
+		for loc in $locis
+		do
+			grep -w $loc $OUT_DIR/Results/Step3_Loci.tab >> $OUT_DIR/Step3_Summary
+		done
 	done
-done
+else
+	echo "### No Loci with a clear donor site were found" >> $OUT_DIR/Step3_Summary
+fi
 
 # Loci with unclear donor site found
 
@@ -781,8 +792,8 @@ then
 		reference_sequence_seq=$(seqkit grep -r -p $reference_sequence_ID"$" $OUT_DIR/Results/pSL_Loci_Unclear.fa | seqkit seq -s -t dna -v)
 		print_cluster=$(echo $cluster | sed 's/XXX$//' | sed 's/_/ /')
 		echo -e "
-"$print_cluster"
-Representative pSL: "$reference_sequence_ID"\tSequence: "$reference_sequence_seq"
+		"$print_cluster"
+		Representative pSL: "$reference_sequence_ID"\tSequence: "$reference_sequence_seq"
 Loci\tScaffold\tLocus extended length\tLocus Orientation\tHook Variants\tDonor Site\tBest pSL ID\tStart-Best\tEnd-Best\tAnnotation Hits\tBest Hit ID\tIdentity\tEvalue" >> $OUT_DIR/Step3_Summary
 		for loc in $locis
 		do
