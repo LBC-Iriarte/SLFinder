@@ -60,9 +60,8 @@ exit
 paste_summary ()
 {
   cat $paste_files | awk -F "\t" '{if ($2>0) print $1}' | sort -u >> $OUT_DIR/temp_files/Raw_counts/$temp_name"_paste.temp"
-  paste $paste_files | awk -F "\t" '{ for (i=3;i<=NF;i+=2) $i="" } 1' | sed "s/  / /g" | tr " " "\t" | grep -w -f $OUT_DIR/temp_files/Raw_counts/$temp_name"_paste.temp" >> $OUT_DIR/Results/$sl"_hits.tab"
+  paste $paste_files | awk -F "\t" '{ for (i=3;i<=NF;i+=2) $i="" } 1' | sed "s/  / /g" | tr " " "\t" | grep -w -f $OUT_DIR/temp_files/Raw_counts/$temp_name"_paste.temp" >> $paste_out
 }
-
 
 ##### Reading Parameters
 while [ "$1" != "" ]; do
@@ -825,10 +824,8 @@ then
         done
 
         echo $sl >> $OUT_DIR/temp_files/Raw_counts/$read"_header.temp"
-        for feat in $feature_name
-        do
-          grep $feat":" $OUT_DIR/Results/Raw_counts/$read"_"$sl"_raw_htseq.counts" >> $OUT_DIR/temp_files/Raw_counts/$read"_"$sl"_raw_htseq.temp"
-        done
+
+        grep -v "^__" $OUT_DIR/Results/Raw_counts/$read"_"$sl"_raw_htseq.counts" >> $OUT_DIR/temp_files/Raw_counts/$read"_"$sl"_raw_htseq.temp"
 
         header=$(echo $header"\t"$read)
       fi
@@ -839,6 +836,7 @@ then
     if [ $check_data_number -gt 1 ]
     then
       paste_files=$OUT_DIR/temp_files/Raw_counts/*"_"$sl"_raw_htseq.temp"
+      paste_out=$OUT_DIR/Results/$sl"_hits.tab"
       temp_name=$sl
       paste_summary
     else
@@ -864,7 +862,7 @@ then
     for read in $data_reads
     do
       cat $OUT_DIR/temp_files/Raw_counts/$read"_header.temp" | tr "\n" "\t" | awk '{print "Gene_ID\t"$0}' >> $OUT_DIR/Results/SL_Hits/$read"_SL_hits.tab"
-
+      paste_out=$OUT_DIR/Results/SL_Hits/$read"_SL_hits.tab"
       paste_files=$OUT_DIR/temp_files/Raw_counts/$read"_"*"_raw_htseq.temp"
       temp_name=$read
       paste_summary
