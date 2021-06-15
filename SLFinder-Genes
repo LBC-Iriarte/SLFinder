@@ -76,7 +76,7 @@ while [ "$1" != "" ]; do
                       HTSEQ_ID_ATRIBUTE=$1
                       ;;
     -gc | --gtfco )   shift
-                      $HTSEQ_COUNT_ATRIBUTE=$1
+                      HTSEQ_COUNT_ATRIBUTE=$1
                       ;;
     -m | --missing )  shift
                       MISSING=$1
