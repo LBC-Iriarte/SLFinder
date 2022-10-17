@@ -388,6 +388,7 @@ do
 		then
 			echo "WARNING: "$loci" start is too close to the beginning of the sequence chromosome sequence for proper alignment." >> $OUT_DIR/Warnings/Step3_Sequence-retrieval-warnings
 			donor_site_alert=TRUE
+			aln_start=$loci_start
 		else
 			aln_start=$(($loci_start - 2 ))
 		fi
