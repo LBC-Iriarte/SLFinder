@@ -456,6 +456,7 @@ do
 		if [ $loci_alert -eq 3 ] || [ ! "$donor_site_alert" == "False" ] || [ "$seq_orient" == "Undeterminated" ]
 		then
 			for hook in $hook_variants
+			do
 				grep -w $hook $OUT_DIR/temp_files/Genome_locis/$chr"_"$loci"_pSL-matches" | awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\tNot Analyzed\tNot Analyzed"}' >> $OUT_DIR/Results/Genome_locis/$chr"_Loci-Data"/$chr"_"$loci".tab"
 			done
 		else
