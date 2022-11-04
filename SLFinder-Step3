@@ -483,6 +483,7 @@ do
 		# Extracting sequence for Annotation
 		if [ $loci_start -lt $GENOME_REGION_RANGE ]
 		then
+			blastn_start=$loci_start 
 			echo "WARNING: "$loci" start is too close to the beginning of the sequence chromosome sequence for proper alignment." >> $OUT_DIR/Warnings/Step3_Sequence-retrieval-warnings
 		else
 			blastn_start=$(($loci_start - $GENOME_REGION_RANGE ))
