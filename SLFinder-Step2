@@ -269,7 +269,7 @@ do
 		# The central section of each trimmed sequence is present on the original sequences (no central positions were removed)
 		bad_trim=0
 		trim_seq=$(seqkit subseq -r "2:-2" $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-raw" | seqkit seq -s | tr -d "-" )
-		for trimed in trim_seq
+		for trimed in $trim_seq
 		do
 			matches=$(seqkit grep -s -r -p $trimed $OUT_DIR/Results/alignments/$seqfile2".aln" | grep -c ">")
 			if [ $matches -ne 0 ]
@@ -280,13 +280,12 @@ do
 		if [ $bad_trim -ne 0 ]
 		then
 			echo $seqfile2": Some sequences do not match the original aligment ("$bad_trim")" >> $OUT_DIR/Warnings/Step2_Manual-curation
-		else
-			# If everything is right, generate a sequence logos for the trimal sequences and remove gaps
-			weblogo -a ACTG -D fasta -c classic -F pdf -f $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-raw" -o $OUT_DIR/Results/weblogos/trimed_aligment/$seqfile2"_Trimal-seqlogo.pdf"
-			seqkit seq -g $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-raw" >> $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-nogap"
-			abemus_data=TRUE
-			cd-hit-est -c 1 -T $THREADS -i $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-nogap" -o $OUT_DIR/Results/Hook_variants/Hook_Individual/$seqfile2"-SL.fa"
 		fi
+		# If everything is right, generate a sequence logos for the trimal sequences and remove gaps
+		weblogo -a ACTG -D fasta -c classic -F pdf -f $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-raw" -o $OUT_DIR/Results/weblogos/trimed_aligment/$seqfile2"_Trimal-seqlogo.pdf"
+		seqkit seq -g $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-raw" >> $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-nogap"
+		abemus_data=TRUE
+		cd-hit-est -c 1 -T $THREADS -i $OUT_DIR/temp_files/trimal_raw/$seqfile2".trimal-nogap" -o $OUT_DIR/Results/Hook_variants/Hook_Individual/$seqfile2"-SL.fa"
 	else
 		echo $seqfile2": curated alignment has less than "$MIN_TRIMAL"bp ("$seq_len")" >> $OUT_DIR/Warnings/Step2_Manual-curation
 	fi
